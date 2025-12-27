@@ -16,11 +16,11 @@ export function extractPlaylistId(input: string): string {
 		const parts = u.pathname.split("/").filter(Boolean);
 		const idx = parts.indexOf("playlist");
 		if (idx !== -1 && parts[idx + 1]) return parts[idx + 1];
-	} catch {}
+	} catch (err) {}
 
 	const idMatch = clean.match(/^([A-Za-z0-9_-]{8,})$/);
 	return idMatch ? idMatch[1] : clean;
-}
+};
 
 export function extractTrackId(input: string): string {
 	if (!input) return input;
@@ -41,8 +41,8 @@ export function extractTrackId(input: string): string {
 		const parts = u.pathname.split("/").filter(Boolean);
 		const idx = parts.indexOf("track");
 		if (idx !== -1 && parts[idx + 1]) return parts[idx + 1];
-	} catch {}
+	} catch (err) {}
 
 	const idMatch = clean.match(/^([A-Za-z0-9_-]{8,})$/);
 	return idMatch ? idMatch[1] : clean;
-}
+};

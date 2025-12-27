@@ -1,16 +1,4 @@
-import type {
-	PartnerArtist,
-	PartnerImage,
-	PartnerPlaylistItem,
-	PartnerPlaylistResponse,
-	PartnerRecommendationItem,
-	PartnerRecommendationsResponse,
-	RecommendationsResponse,
-	SpotifyArtist,
-	SpotifyPlaylist,
-	SpotifyPlaylistTrackItem,
-	SpotifyTrack,
-} from "../types/spotify.js";
+import type { PartnerRecommendationsResponse, PartnerRecommendationItem, RecommendationsResponse, PartnerArtist, PartnerImage, PartnerPlaylistItem, PartnerPlaylistResponse,SpotifyArtist, SpotifyPlaylist, SpotifyPlaylistTrackItem, SpotifyTrack } from "../types/spotify.js";
 
 export function transformPlaylistResponse(
 	data: PartnerPlaylistResponse,
@@ -77,10 +65,8 @@ export function transformPlaylistResponse(
 	const items = contentItems
 		.map((item: PartnerPlaylistItem) => {
 			const trackData = item.itemV2?.data;
-			if (!trackData || trackData.__typename !== "Track") {
-				return null;
-			}
-
+			if (!trackData || trackData.__typename !== "Track") return null;
+			
 			const album = trackData.albumOfTrack;
 			const artists: PartnerArtist[] = trackData.artists?.items ?? [];
 			const albumId = album?.uri?.split(":")[2] ?? "";
@@ -226,31 +212,24 @@ export function transformPlaylistResponse(
 	};
 
 	return playlist;
-}
+};
 
-export function transformRecommendationsResponse(
-	data: PartnerRecommendationsResponse,
-	seedTrackId: string,
-): RecommendationsResponse {
+export function transformRecommendationsResponse(data: PartnerRecommendationsResponse, seedTrackId: string): RecommendationsResponse {
 	// shits api may return recommendations under different fields depending on
 	// the persisted query. prefer `internalLinkRecommenderTrack`, but fall back
 	// to `seoRecommendedTrack` when available (observed in partner responses)
 	const recommendations =
 		data?.data?.internalLinkRecommenderTrack?.items ??
 		data?.data?.seoRecommendedTrack?.items;
-	if (!recommendations) {
-		return { seeds: [], tracks: [] };
-	}
-
+	if (!recommendations) return { seeds: [], tracks: [] };
+	
 	const tracks = recommendations
 		.map((item: PartnerRecommendationItem) => {
 			// Support both { content: { data } } and { data } item shapes returned
 			// by different partner persisted queries.
 			const trackData = item.content?.data ?? item.data;
-			if (!trackData || trackData.__typename !== "Track") {
-				return null;
-			}
-
+			if (!trackData || trackData.__typename !== "Track") return null;
+			
 			const album = trackData.albumOfTrack;
 			const artists: PartnerArtist[] = trackData.artists?.items ?? [];
 			const albumId = album?.uri?.split(":")[2] ?? "";
@@ -343,4 +322,4 @@ export function transformRecommendationsResponse(
 		],
 		tracks,
 	};
-}
+};

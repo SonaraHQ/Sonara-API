@@ -1,7 +1,6 @@
-import "dotenv/config";
-
-import { Hono } from "hono";
 import spotifyRoutes from "./routes/spotify.routes.js";
+import { Hono } from "hono";
+import "dotenv/config";
 
 const app = new Hono()
 	.get("/", (c) => {
@@ -26,13 +25,10 @@ const app = new Hono()
 			},
 		});
 	})
-
 	.route("/", spotifyRoutes)
-
 	.notFound((c) => {
 		return c.json({ error: "Not Found" }, 404);
 	})
-
 	.onError((err, c) => {
 		console.error(`Error: ${err.message}`);
 		return c.json({ error: err.message }, 500);

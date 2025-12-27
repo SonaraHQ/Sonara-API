@@ -1,24 +1,11 @@
-import type {
-	PlaylistRequestVariables,
-	RecommendationRequestVariables,
-	SpotifyAPIRequest,
-	SpotifyPlaylist,
-	SpotifyPlaylistTrackItem,
-	SpotifyTrack,
-} from "../types/spotify.js";
-import {
-	transformPlaylistResponse,
-	transformRecommendationsResponse,
-} from "../utils/transformers.js";
+import type { RecommendationRequestVariables, SpotifyPlaylistTrackItem, PlaylistRequestVariables, SpotifyAPIRequest, SpotifyPlaylist, SpotifyTrack,} from "../types/spotify.js";
+import { transformRecommendationsResponse, transformPlaylistResponse } from "../utils/transformers.js";
 import { getAccessToken, getWebApiToken } from "./token.service.js";
 
 const SPOTIFY_API_BASE = "https://api-partner.spotify.com/pathfinder/v2/query";
 const SPOTIFY_WEB_API_BASE = "https://api.spotify.com/v1";
 
-export async function fetchPlaylist(
-	playlistId: string,
-	authToken?: string,
-): Promise<SpotifyPlaylist> {
+export async function fetchPlaylist(playlistId: string, authToken?: string,) {
 	const token = authToken ?? (await getAccessToken());
 
 	const payload: SpotifyAPIRequest<PlaylistRequestVariables> = {
@@ -46,20 +33,14 @@ export async function fetchPlaylist(
 		body: JSON.stringify(payload),
 	});
 
-	if (!response.ok) {
-		throw new Error(`Spotify API error: ${response.statusText}`);
-	}
+	if (!response.ok) throw new Error(`Spotify API error: ${response.statusText}`);
 
 	const data = await response.json();
 	// returns a SpotifyPlaylist object (Spotify Web API-like) or legacy tracks list
 	return transformPlaylistResponse(data) as SpotifyPlaylist;
-}
+};
 
-export async function fetchRecommendations(
-	trackId: string,
-	limit: number = 5,
-	authToken?: string,
-) {
+export async function fetchRecommendations(trackId: string, limit: number = 5, authToken?: string,) {
 	const token = authToken ?? (await getAccessToken());
 
 	const payload: SpotifyAPIRequest<RecommendationRequestVariables> = {
@@ -86,37 +67,25 @@ export async function fetchRecommendations(
 		body: JSON.stringify(payload),
 	});
 
-	if (!response.ok) {
-		throw new Error(`Spotify API error: ${response.statusText}`);
-	}
+	if (!response.ok) throw new Error(`Spotify API error: ${response.statusText}`);
 
 	const data = await response.json();
 	return transformRecommendationsResponse(data, trackId);
-}
+};
 
-export async function fetchPlaylistFull(
-	playlistId: string,
-	clientId?: string,
-	clientSecret?: string,
-) {
+export async function fetchPlaylistFull(playlistId: string, clientId?: string, clientSecret?: string,) {
 	const playlist = (await fetchPlaylist(playlistId)) as SpotifyPlaylist;
 
 	const items: SpotifyPlaylistTrackItem[] = playlist.tracks?.items ?? [];
-	const ids = items
-		.map((it) => it.track?.id)
-		.filter((x): x is string => Boolean(x));
+	const ids = items.map((it) => it.track?.id).filter((x): x is string => Boolean(x));
 
-	if (!ids.length) {
-		return playlist;
-	}
-
+	if (!ids.length) return playlist;
+	
 	const token = await getWebApiToken(clientId, clientSecret);
 
 	const batches: string[][] = [];
-	for (let i = 0; i < ids.length; i += 100) {
-		batches.push(ids.slice(i, i + 100));
-	}
-
+	for (let i = 0; i < ids.length; i += 100) batches.push(ids.slice(i, i + 100));
+	
 	const aggregatedTracks: SpotifyTrack[] = [];
 
 	for (const batch of batches) {
@@ -133,13 +102,13 @@ export async function fetchPlaylistFull(
 			throw new Error(
 				`Spotify Web API error: ${response.status} ${response.statusText} - ${text}`,
 			);
-		}
+		};
 
 		const data = await response.json();
 		if (Array.isArray(data.tracks)) {
 			aggregatedTracks.push(...data.tracks);
-		}
-	}
+		};
+	};
 
 	// Merge full track objects back into playlist items
 	const idMap = new Map(aggregatedTracks.map((t) => [t.id, t]));
@@ -147,43 +116,33 @@ export async function fetchPlaylistFull(
 		const id = it.track?.id;
 		if (id && idMap.has(id)) {
 			return { ...it, track: idMap.get(id) };
-		}
+		};
+
 		return it;
 	});
 	// Patch the existing playlist object
 	playlist.tracks.items = mergedItems;
 	playlist.tracks.total = mergedItems.length;
 	return playlist;
-}
+};
 
-export async function fetchRecommendationsFull(
-	trackId: string,
-	limit: number = 5,
-	clientId?: string,
-	clientSecret?: string,
-) {
+export async function fetchRecommendationsFull(trackId: string, limit: number = 5, clientId?: string, clientSecret?: string,) {
 	// Get the lightweight recommendations (seeds + track ids)
 	const rec = await fetchRecommendations(trackId, limit);
 	const ids = rec.tracks.map((t) => t.id).filter(Boolean);
 
-	if (!ids.length) {
-		// return the original seeds and empty tracks array
-		return { seeds: rec.seeds, tracks: [] };
-	}
+	if (!ids.length) return { seeds: rec.seeds, tracks: [] }; // return the original seeds and empty tracks array
 
 	const token = await getWebApiToken(clientId, clientSecret);
 
 	const batches: string[][] = [];
-	for (let i = 0; i < ids.length; i += 100) {
-		batches.push(ids.slice(i, i + 100));
-	}
-
+	for (let i = 0; i < ids.length; i += 100) batches.push(ids.slice(i, i + 100));
+	
 	const aggregatedTracks: SpotifyTrack[] = [];
 
 	for (const batch of batches) {
-		const url = `${SPOTIFY_WEB_API_BASE}/tracks?ids=${encodeURIComponent(
-			batch.join(","),
-		)}`;
+		const url = `${SPOTIFY_WEB_API_BASE}/tracks?ids=${encodeURIComponent(batch.join(","))}`;
+
 		const response = await fetch(url, {
 			method: "GET",
 			headers: {
@@ -196,13 +155,13 @@ export async function fetchRecommendationsFull(
 			throw new Error(
 				`Spotify Web API error: ${response.status} ${response.statusText} - ${text}`,
 			);
-		}
+		};
 
 		const data = await response.json();
 		if (Array.isArray(data.tracks)) {
 			aggregatedTracks.push(...data.tracks);
-		}
-	}
+		};
+	};
 
 	return { seeds: rec.seeds, tracks: aggregatedTracks };
-}
+};
