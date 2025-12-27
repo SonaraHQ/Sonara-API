@@ -1,0 +1,18 @@
+{
+  "name": "solify",
+  "type": "module",
+  "scripts": {
+    "dev:bun": "bun --watch src/index.ts",
+    "start:bun": "bun src/index.ts",
+    "format": "biome check --write ./src"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "hono": "^4.8.9"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.10",
+    "@types/node": "^20.11.17",
+    "typescript": "^5.8.3"
+  }
+}
