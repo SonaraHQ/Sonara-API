@@ -1,18 +1,36 @@
-import type { RecommendationRequestVariables, SpotifyPlaylistTrackItem, PlaylistRequestVariables, SpotifyAPIRequest, SpotifyPlaylist, SpotifyTrack,} from "../types/spotify.js";
+import type { RecommendationRequestVariables, SpotifyRecommendations, SpotifyPlaylistTrackItem, PlaylistRequestVariables, SpotifyAPIRequest, SpotifyPlaylist, SpotifyTrack,} from "../types/spotify.js";
 import { transformRecommendationsResponse, transformPlaylistResponse } from "../utils/transformers.js";
 import { getAccessToken, getWebApiToken } from "./token.service.js";
+import { LRUCache } from "lru-cache";
 
 const SPOTIFY_API_BASE = "https://api-partner.spotify.com/pathfinder/v2/query";
 const SPOTIFY_WEB_API_BASE = "https://api.spotify.com/v1";
 
-export async function fetchPlaylist(playlistId: string, authToken?: string,) {
+const playlistCache = new LRUCache<string, SpotifyPlaylist>({
+	max: 1000,
+	ttl: 43_200_000,
+	ttlAutopurge: true,
+	updateAgeOnGet: true,
+});
+
+const recommendationsCache = new LRUCache<string, SpotifyRecommendations>({
+	max: 1000,
+	ttl: 43_200_000,
+	ttlAutopurge: true,
+	updateAgeOnGet: true,
+})
+
+export async function fetchPlaylist(playlistId: string, limit: number = 100, authToken?: string) {
+	const cached = playlistCache.get(playlistId);
+	if (cached) return cached;
+
 	const token = authToken ?? (await getAccessToken());
 
 	const payload: SpotifyAPIRequest<PlaylistRequestVariables> = {
 		variables: {
 			uri: `spotify:playlist:${playlistId}`,
 			enableWatchFeedEntrypoint: false,
-			limit: 100,
+			limit,
 		},
 		operationName: "fetchPlaylist",
 		extensions: {
@@ -37,10 +55,16 @@ export async function fetchPlaylist(playlistId: string, authToken?: string,) {
 
 	const data = await response.json();
 	// returns a SpotifyPlaylist object (Spotify Web API-like) or legacy tracks list
-	return transformPlaylistResponse(data) as SpotifyPlaylist;
+	const playlist = transformPlaylistResponse(data) as SpotifyPlaylist;
+
+	playlistCache.set(playlistId, playlist);
+	return playlist;
 };
 
-export async function fetchRecommendations(trackId: string, limit: number = 5, authToken?: string,) {
+export async function fetchRecommendations(trackId: string, limit: number = 5, authToken?: string) : Promise<SpotifyRecommendations> {
+	const cached = recommendationsCache.get(trackId);
+	if (cached) return cached;
+	
 	const token = authToken ?? (await getAccessToken());
 
 	const payload: SpotifyAPIRequest<RecommendationRequestVariables> = {
@@ -70,10 +94,13 @@ export async function fetchRecommendations(trackId: string, limit: number = 5, a
 	if (!response.ok) throw new Error(`Spotify API error: ${response.statusText}`);
 
 	const data = await response.json();
-	return transformRecommendationsResponse(data, trackId);
+	const recommendations = transformRecommendationsResponse(data, trackId) as SpotifyRecommendations;
+	
+	recommendationsCache.set(trackId, recommendations);
+	return recommendations;
 };
 
-export async function fetchPlaylistFull(playlistId: string, clientId?: string, clientSecret?: string,) {
+export async function fetchPlaylistFull(playlistId: string, clientId?: string, clientSecret?: string) {
 	const playlist = (await fetchPlaylist(playlistId)) as SpotifyPlaylist;
 
 	const items: SpotifyPlaylistTrackItem[] = playlist.tracks?.items ?? [];
@@ -126,7 +153,7 @@ export async function fetchPlaylistFull(playlistId: string, clientId?: string, c
 	return playlist;
 };
 
-export async function fetchRecommendationsFull(trackId: string, limit: number = 5, clientId?: string, clientSecret?: string,) {
+export async function fetchRecommendationsFull(trackId: string, limit: number = 5, clientId?: string, clientSecret?: string) {
 	// Get the lightweight recommendations (seeds + track ids)
 	const rec = await fetchRecommendations(trackId, limit);
 	const ids = rec.tracks.map((t) => t.id).filter(Boolean);

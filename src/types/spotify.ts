@@ -89,6 +89,18 @@ export interface SpotifyPlaylistTrackItem {
 	video_thumbnail?: { url?: string | null };
 };
 
+export type SpotifyRecommendations = {
+	seeds: {
+		afterFilteringSize: number;
+		afterRelinkingSize: number;
+		href: string;
+		id: string;
+		initialPoolSize: number;
+		type: "track";
+	}[];
+	tracks: SpotifyTrack[];
+};
+
 export interface SpotifyPlaylist {
 	collaborative: boolean;
 	description: string | null;

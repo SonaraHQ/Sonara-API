@@ -1,8 +1,6 @@
 import type { PartnerRecommendationsResponse, PartnerRecommendationItem, RecommendationsResponse, PartnerArtist, PartnerImage, PartnerPlaylistItem, PartnerPlaylistResponse,SpotifyArtist, SpotifyPlaylist, SpotifyPlaylistTrackItem, SpotifyTrack } from "../types/spotify.js";
 
-export function transformPlaylistResponse(
-	data: PartnerPlaylistResponse,
-): SpotifyPlaylist {
+export function transformPlaylistResponse(data: PartnerPlaylistResponse): SpotifyPlaylist {
 	const playlistData = data?.data?.playlistV2;
 	if (!playlistData?.content?.items) {
 		// Return an empty SpotifyPlaylist object (no legacy `{ tracks: [] }`)
