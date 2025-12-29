@@ -101,6 +101,11 @@ export type SpotifyRecommendations = {
 	tracks: SpotifyTrack[];
 };
 
+export interface CacheProvider<T> {
+	get(id: string): T | null;
+	set(id: string, value: T): void;
+};
+
 export interface SpotifyPlaylist {
 	collaborative: boolean;
 	description: string | null;

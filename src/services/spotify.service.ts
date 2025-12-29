@@ -2,9 +2,12 @@ import type { RecommendationRequestVariables, SpotifyRecommendations, SpotifyPla
 import { transformRecommendationsResponse, transformPlaylistResponse } from "../utils/transformers.js";
 import { getAccessToken, getWebApiToken } from "./token.service.js";
 import { LRUCache } from "lru-cache";
+import fs from "node:fs/promises";
+import path from "node:path"; 
 
 const SPOTIFY_API_BASE = "https://api-partner.spotify.com/pathfinder/v2/query";
 const SPOTIFY_WEB_API_BASE = "https://api.spotify.com/v1";
+const CACHE_DIR = "./cache";
 
 const playlistCache = new LRUCache<string, SpotifyPlaylist>({
 	max: 1000,
@@ -18,11 +21,37 @@ const recommendationsCache = new LRUCache<string, SpotifyRecommendations>({
 	ttl: 43_200_000,
 	ttlAutopurge: true,
 	updateAgeOnGet: true,
-})
+});
+
+async function readJSON<T>(filePath: string): Promise<T | null> {
+	try {
+		const data = await fs.readFile(filePath, "utf-8");
+		return JSON.parse(data) as T;
+	} catch {
+		return null;
+	};
+};
+
+async function writeJSON(filePath: string, data: unknown): Promise<void> {
+	try {
+		await fs.mkdir(path.dirname(filePath), { recursive: true });
+		await fs.writeFile(filePath, JSON.stringify(data), "utf-8");
+	} catch {
+		console.log("Failed to write JSON file");
+	};
+};
 
 export async function fetchPlaylist(playlistId: string, limit: number = 100, authToken?: string) {
 	const cached = playlistCache.get(playlistId);
 	if (cached) return cached;
+
+	const filePath = path.join(CACHE_DIR, `${playlistId}.json`);
+	const fileCached = await readJSON<SpotifyPlaylist>(filePath);
+	if (fileCached) {
+		console.log("Playlist cached");
+		playlistCache.set(playlistId, fileCached);
+		return fileCached;
+	};
 
 	const token = authToken ?? (await getAccessToken());
 
@@ -58,12 +87,20 @@ export async function fetchPlaylist(playlistId: string, limit: number = 100, aut
 	const playlist = transformPlaylistResponse(data) as SpotifyPlaylist;
 
 	playlistCache.set(playlistId, playlist);
+	await writeJSON(filePath, playlist); 
 	return playlist;
 };
 
 export async function fetchRecommendations(trackId: string, limit: number = 5, authToken?: string) : Promise<SpotifyRecommendations> {
 	const cached = recommendationsCache.get(trackId);
 	if (cached) return cached;
+
+	const filePath = path.join(CACHE_DIR, `${trackId}.json`);
+	const fileCached = await readJSON<SpotifyRecommendations>(filePath);
+	if (fileCached) {
+		recommendationsCache.set(trackId, fileCached);
+		return fileCached;
+	};
 	
 	const token = authToken ?? (await getAccessToken());
 
@@ -97,6 +134,7 @@ export async function fetchRecommendations(trackId: string, limit: number = 5, a
 	const recommendations = transformRecommendationsResponse(data, trackId) as SpotifyRecommendations;
 	
 	recommendationsCache.set(trackId, recommendations);
+	await writeJSON(filePath, recommendations); 
 	return recommendations;
 };
 
