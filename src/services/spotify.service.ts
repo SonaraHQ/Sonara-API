@@ -48,7 +48,6 @@ export async function fetchPlaylist(playlistId: string, limit: number = 100, aut
 	const filePath = path.join(CACHE_DIR, `${playlistId}.json`);
 	const fileCached = await readJSON<SpotifyPlaylist>(filePath);
 	if (fileCached) {
-		console.log("Playlist cached");
 		playlistCache.set(playlistId, fileCached);
 		return fileCached;
 	};
