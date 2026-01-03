@@ -178,10 +178,8 @@ export async function fetchPlaylistFull(playlistId: string, clientId?: string, c
 	const idMap = new Map(aggregatedTracks.map((t) => [t.id, t]));
 	const mergedItems = items.map((it) => {
 		const id = it.track?.id;
-		if (id && idMap.has(id)) {
-			return { ...it, track: idMap.get(id) };
-		};
-
+		if (id && idMap.has(id)) return { ...it, track: idMap.get(id) };
+		
 		return it;
 	});
 	// Patch the existing playlist object
@@ -222,9 +220,7 @@ export async function fetchRecommendationsFull(trackId: string, limit: number = 
 		};
 
 		const data = await response.json();
-		if (Array.isArray(data.tracks)) {
-			aggregatedTracks.push(...data.tracks);
-		};
+		if (Array.isArray(data.tracks)) aggregatedTracks.push(...data.tracks);
 	};
 
 	return { seeds: rec.seeds, tracks: aggregatedTracks };
