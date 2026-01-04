@@ -1,4 +1,4 @@
-# solify - Spotify Resolver
+# hfy - Spotify Resolver
 
 Simple Spotify API resolver for playlists and track recommendations using Hono framework.
 
