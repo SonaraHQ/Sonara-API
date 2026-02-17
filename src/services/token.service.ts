@@ -6,13 +6,13 @@ export async function getAccessToken(): Promise<string> {
 	try {
 		const response = await fetch(config.tokenEndpoint);
 
-		if (!response.ok) throw new Error(`Failed to fetch token: ${response.statusText}`);
+		if (!response.ok) throw new Error(`Failed to fetch token -> ${response.statusText}`);
 
 		const data: TokenResponse = await response.json();
 
 		return data.accessToken;
 	} catch (error) {
-		throw new Error(`Error fetching Spotify token: ${error}`);
+		throw new Error(`Error fetching Spotify token -> ${error}`);
 	};
 };
 
@@ -40,7 +40,7 @@ export async function getWebApiToken(clientId?: string, clientSecret?: string): 
 		if (!response.ok) {
 			const text = await response.text();
 			throw new Error(
-				`Failed to fetch Spotify Web API token: ${response.status} ${response.statusText} - ${text}`,
+				`Failed to fetch Spotify Web API token -> ${response.status} ${response.statusText} - ${text}`,
 			);
 		};
 
@@ -49,6 +49,6 @@ export async function getWebApiToken(clientId?: string, clientSecret?: string): 
 
 		return token;
 	} catch (error) {
-		throw new Error(`Error fetching Spotify Web API token: ${error}`);
+		throw new Error(`Error fetching Spotify Web API token -> ${error}`);
 	};
 };

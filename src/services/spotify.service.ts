@@ -79,7 +79,7 @@ export async function fetchPlaylist(playlistId: string, limit: number = 100, aut
 		body: JSON.stringify(payload),
 	});
 
-	if (!response.ok) throw new Error(`Spotify API error: ${response.statusText}`);
+	if (!response.ok) throw new Error(`Spotify API error -> ${response.statusText}`);
 
 	const data = await response.json();
 	// returns a SpotifyPlaylist object (Spotify Web API-like) or legacy tracks list
@@ -127,7 +127,7 @@ export async function fetchRecommendations(trackId: string, limit: number = 5, a
 		body: JSON.stringify(payload),
 	});
 
-	if (!response.ok) throw new Error(`Spotify API error: ${response.statusText}`);
+	if (!response.ok) throw new Error(`Spotify API error -> ${response.statusText}`);
 
 	const data = await response.json();
 	const recommendations = transformRecommendationsResponse(data, trackId) as SpotifyRecommendations;
@@ -164,7 +164,7 @@ export async function fetchPlaylistFull(playlistId: string, clientId?: string, c
 		if (!response.ok) {
 			const text = await response.text();
 			throw new Error(
-				`Spotify Web API error: ${response.status} ${response.statusText} - ${text}`,
+				`Spotify Web API error -> ${response.status} ${response.statusText} - ${text}`,
 			);
 		};
 
@@ -215,7 +215,7 @@ export async function fetchRecommendationsFull(trackId: string, limit: number = 
 		if (!response.ok) {
 			const text = await response.text();
 			throw new Error(
-				`Spotify Web API error: ${response.status} ${response.statusText} - ${text}`,
+				`Spotify Web API error -> ${response.status} ${response.statusText} - ${text}`,
 			);
 		};
 
