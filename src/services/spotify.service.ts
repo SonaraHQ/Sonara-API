@@ -27,7 +27,8 @@ async function readJSON<T>(filePath: string): Promise<T | null> {
 	try {
 		const data = await fs.readFile(filePath, "utf-8");
 		return JSON.parse(data) as T;
-	} catch {
+	} catch (err) {
+		console.log(`Failed to read JSON file -> ${filePath} -> ${err}`);
 		return null;
 	};
 };
@@ -36,8 +37,8 @@ async function writeJSON(filePath: string, data: unknown): Promise<void> {
 	try {
 		await fs.mkdir(path.dirname(filePath), { recursive: true });
 		await fs.writeFile(filePath, JSON.stringify(data), "utf-8");
-	} catch {
-		console.log("Failed to write JSON file");
+	} catch (err) {
+		console.log(`Failed to write JSON file -> ${filePath} -> ${err}`);
 	};
 };
 
