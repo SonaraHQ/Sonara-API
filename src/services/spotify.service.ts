@@ -28,7 +28,6 @@ async function readJSON<T>(filePath: string): Promise<T | null> {
 		const data = await fs.readFile(filePath, "utf-8");
 		return JSON.parse(data) as T;
 	} catch (err) {
-		console.log(`Failed to read JSON file -> ${filePath} -> ${err}`);
 		return null;
 	};
 };
@@ -83,11 +82,66 @@ export async function fetchPlaylist(playlistId: string, limit: number = 100, aut
 	if (!response.ok) throw new Error(`Spotify API error -> ${response.statusText}`);
 
 	const data = await response.json();
-	// returns a SpotifyPlaylist object (Spotify Web API-like) or legacy tracks list
-	const playlist = transformPlaylistResponse(data) as SpotifyPlaylist;
+	const playlist = transformPlaylistResponse(data) as SpotifyPlaylist; // returns a SpotifyPlaylist object (Spotify Web API-like) or legacy tracks list
 
-	playlistCache.set(playlistId, playlist);
-	await writeJSON(filePath, playlist); 
+	return playlist;
+};
+
+export async function fetchPlaylistFull(playlistId: string, clientId?: string, clientSecret?: string) {
+	const playlist = (await fetchPlaylist(playlistId)) as SpotifyPlaylist;
+
+	const items: SpotifyPlaylistTrackItem[] = playlist.tracks?.items ?? [];
+	const ids = items.map((it) => it.track?.id).filter((x): x is string => Boolean(x));
+
+	if (!ids.length) return playlist;
+	
+	const token = await getWebApiToken(clientId, clientSecret);
+
+	const batches: string[][] = [];
+	for (let i = 0; i < ids.length; i += 100) batches.push(ids.slice(i, i + 100));
+	
+	const aggregatedTracks: SpotifyTrack[] = [];
+	for (const batch of batches) {
+		const url = `${SPOTIFY_WEB_API_BASE}/tracks?ids=${encodeURIComponent(batch.join(","))}`;
+		const response = await fetch(url, {
+			method: "GET",
+			headers: {
+				Authorization: `Bearer ${token}`,
+			},
+		});
+
+		if (!response.ok) {
+			const text = await response.text();
+			throw new Error(
+				`Spotify Web API error -> ${response.status} ${response.statusText} - ${text}`,
+			);
+		};
+
+		const data = await response.json();
+		if (Array.isArray(data.tracks)) {
+			aggregatedTracks.push(...data.tracks);
+		};
+	};
+
+	// Merge full track objects back into playlist items
+	const idMap = new Map(aggregatedTracks.map((t) => [t.id, t]));
+	const mergedItems = items.map((it) => {
+		const id = it.track?.id;
+		if (id && idMap.has(id)) return { ...it, track: idMap.get(id) };
+		
+		return it;
+	});
+
+	playlist.tracks.items = mergedItems; // Patch the existing playlist object
+	playlist.tracks.total = mergedItems.length;
+	
+	if (!playlist?.name?.includes("Daily Mix")) { // The playlist name is "Daily Mix" for the daily mix playlists, and we don't want to cache them because they are not the same for each user.
+		const filePath = path.join(CACHE_DIR, `${playlistId}.json`);
+		
+		playlistCache.set(playlistId, playlist);
+		await writeJSON(filePath, playlist); 
+	};
+	
 	return playlist;
 };
 
@@ -136,57 +190,6 @@ export async function fetchRecommendations(trackId: string, limit: number = 5, a
 	recommendationsCache.set(trackId, recommendations);
 	await writeJSON(filePath, recommendations); 
 	return recommendations;
-};
-
-export async function fetchPlaylistFull(playlistId: string, clientId?: string, clientSecret?: string) {
-	const playlist = (await fetchPlaylist(playlistId)) as SpotifyPlaylist;
-
-	const items: SpotifyPlaylistTrackItem[] = playlist.tracks?.items ?? [];
-	const ids = items.map((it) => it.track?.id).filter((x): x is string => Boolean(x));
-
-	if (!ids.length) return playlist;
-	
-	const token = await getWebApiToken(clientId, clientSecret);
-
-	const batches: string[][] = [];
-	for (let i = 0; i < ids.length; i += 100) batches.push(ids.slice(i, i + 100));
-	
-	const aggregatedTracks: SpotifyTrack[] = [];
-
-	for (const batch of batches) {
-		const url = `${SPOTIFY_WEB_API_BASE}/tracks?ids=${encodeURIComponent(batch.join(","))}`;
-		const response = await fetch(url, {
-			method: "GET",
-			headers: {
-				Authorization: `Bearer ${token}`,
-			},
-		});
-
-		if (!response.ok) {
-			const text = await response.text();
-			throw new Error(
-				`Spotify Web API error -> ${response.status} ${response.statusText} - ${text}`,
-			);
-		};
-
-		const data = await response.json();
-		if (Array.isArray(data.tracks)) {
-			aggregatedTracks.push(...data.tracks);
-		};
-	};
-
-	// Merge full track objects back into playlist items
-	const idMap = new Map(aggregatedTracks.map((t) => [t.id, t]));
-	const mergedItems = items.map((it) => {
-		const id = it.track?.id;
-		if (id && idMap.has(id)) return { ...it, track: idMap.get(id) };
-		
-		return it;
-	});
-	// Patch the existing playlist object
-	playlist.tracks.items = mergedItems;
-	playlist.tracks.total = mergedItems.length;
-	return playlist;
 };
 
 export async function fetchRecommendationsFull(trackId: string, limit: number = 5, clientId?: string, clientSecret?: string) {

@@ -4,7 +4,7 @@ export interface SpotifyRequestVariables {
 	uri: string;
 };
 
-export interface SpotifyAPIRequest <TVariables extends SpotifyRequestVariables = SpotifyRequestVariables> {
+export interface SpotifyAPIRequest<TVariables extends SpotifyRequestVariables = SpotifyRequestVariables> {
 	variables: TVariables;
 	operationName: string;
 	extensions: {
@@ -101,11 +101,6 @@ export type SpotifyRecommendations = {
 	tracks: SpotifyTrack[];
 };
 
-export interface CacheProvider<T> {
-	get(id: string): T | null;
-	set(id: string, value: T): void;
-};
-
 export interface SpotifyPlaylist {
 	collaborative: boolean;
 	description: string | null;
@@ -145,15 +140,6 @@ export interface RecommendationsResponse {
 	seeds: RecommendationSeed[];
 	tracks: SpotifyTrack[];
 };
-
-export interface SpotifyPlaylistTrackItem {
-	track?: SpotifyTrack | null;
-};
-
-export interface SpotifyWebPlaylistTracksResponse {
-	items?: SpotifyPlaylistTrackItem[];
-};
-
 export interface PartnerImage {
 	url?: string;
 	width?: number;
