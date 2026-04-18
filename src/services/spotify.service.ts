@@ -7,7 +7,6 @@ import path from "node:path";
 
 const SPOTIFY_API_BASE = "https://api-partner.spotify.com/pathfinder/v2/query";
 const SPOTIFY_WEB_API_BASE = "https://api.spotify.com/v1";
-const CACHE_DIR = "./cache";
 
 const playlistCache = new LRUCache<string, SpotifyPlaylist>({
 	max: 1000,
@@ -45,15 +44,13 @@ export async function fetchPlaylist(playlistId: string, limit: number = 100, aut
 	const cached = playlistCache.get(playlistId);
 	if (cached) return cached;
 
-	const filePath = path.join(CACHE_DIR, `${playlistId}.json`);
-	const fileCached = await readJSON<SpotifyPlaylist>(filePath);
+	const fileCached = await readJSON<SpotifyPlaylist>(path.join("./cache/playlists", `${playlistId}.json`));
 	if (fileCached) {
 		playlistCache.set(playlistId, fileCached);
 		return fileCached;
 	};
 
 	const token = authToken ?? (await getAccessToken());
-
 	const payload: SpotifyAPIRequest<PlaylistRequestVariables> = {
 		variables: {
 			uri: `spotify:playlist:${playlistId}`,
@@ -135,11 +132,12 @@ export async function fetchPlaylistFull(playlistId: string, clientId?: string, c
 	playlist.tracks.items = mergedItems; // Patch the existing playlist object
 	playlist.tracks.total = mergedItems.length;
 	
-	if (!playlist?.name?.includes("Daily Mix")) { // The playlist name is "Daily Mix" for the daily mix playlists, and we don't want to cache them because they are not the same for each user.
-		const filePath = path.join(CACHE_DIR, `${playlistId}.json`);
-		
+	const name = playlist?.name?.toLowerCase() || "";
+	const isDynamic = name.includes("mix") || name.includes("radio");
+
+	if (!isDynamic) {
 		playlistCache.set(playlistId, playlist);
-		await writeJSON(filePath, playlist); 
+		await writeJSON(path.join("./cache/playlists", `${playlistId}.json`), playlist); 
 	};
 	
 	return playlist;
@@ -149,7 +147,7 @@ export async function fetchRecommendations(trackId: string, limit: number = 5, a
 	const cached = recommendationsCache.get(trackId);
 	if (cached) return cached;
 
-	const filePath = path.join(CACHE_DIR, `${trackId}.json`);
+	const filePath = path.join("./cache/recommendations", `${trackId}.json`);
 	const fileCached = await readJSON<SpotifyRecommendations>(filePath);
 	if (fileCached) {
 		recommendationsCache.set(trackId, fileCached);
@@ -157,7 +155,6 @@ export async function fetchRecommendations(trackId: string, limit: number = 5, a
 	};
 	
 	const token = authToken ?? (await getAccessToken());
-
 	const payload: SpotifyAPIRequest<RecommendationRequestVariables> = {
 		variables: {
 			uri: `spotify:track:${trackId}`,

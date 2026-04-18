@@ -7,13 +7,13 @@
         "format": "biome check --write ./src"
     },
     "dependencies": {
-        "@biomejs/biome": "^2.4.10",
-        "dotenv": "^17.2.3",
-        "hono": "^4.11.7",
-        "lru-cache": "^11.2.7",
-        "typescript": "^6.0.2"
+        "@biomejs/biome": "^2.4.12",
+        "dotenv": "^17.4.2",
+        "hono": "^4.12.14",
+        "lru-cache": "^11.3.5",
+        "typescript": "^6.0.3"
     },
     "devDependencies": {
-        "@types/node": "^24.0"
+        "@types/node": "^24.12.2"
     }
 }
