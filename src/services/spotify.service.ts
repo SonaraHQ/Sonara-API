@@ -1,6 +1,6 @@
 import type { RecommendationRequestVariables, SpotifyRecommendations, SpotifyPlaylistTrackItem, PlaylistRequestVariables, SpotifyAPIRequest, SpotifyPlaylist, SpotifyTrack,} from "../types/spotify.js";
 import { transformRecommendationsResponse, transformPlaylistResponse } from "../utils/transformers.js";
-import { getAccessToken, getWebApiToken } from "./token.service.js";
+import { invalidateAccessTokenCache, getAccessToken, getWebApiToken } from "./token.service.js";
 import { LRUCache } from "lru-cache";
 import fs from "node:fs/promises";
 import path from "node:path"; 
@@ -67,7 +67,7 @@ export async function fetchPlaylist(playlistId: string, limit: number = 100, aut
 		},
 	};
 
-	const response = await fetch(SPOTIFY_API_BASE, {
+	let response = await fetch(SPOTIFY_API_BASE, {
 		method: "POST",
 		headers: {
 			Authorization: `Bearer ${token}`,
@@ -75,6 +75,20 @@ export async function fetchPlaylist(playlistId: string, limit: number = 100, aut
 		},
 		body: JSON.stringify(payload),
 	});
+
+	if (response.status === 401) {
+		invalidateAccessTokenCache();
+
+		const newToken = await getAccessToken();
+		response = await fetch(SPOTIFY_API_BASE, {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${newToken}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(payload),
+		});
+	};
 
 	if (!response.ok) throw new Error(`Spotify API error -> ${response.statusText}`);
 
@@ -170,7 +184,7 @@ export async function fetchRecommendations(trackId: string, limit: number = 5, a
 		},
 	};
 
-	const response = await fetch(SPOTIFY_API_BASE, {
+	let response = await fetch(SPOTIFY_API_BASE, {
 		method: "POST",
 		headers: {
 			Authorization: `Bearer ${token}`,
@@ -178,6 +192,20 @@ export async function fetchRecommendations(trackId: string, limit: number = 5, a
 		},
 		body: JSON.stringify(payload),
 	});
+
+	if (response.status === 401) {
+		invalidateAccessTokenCache();
+
+		const newToken = await getAccessToken();
+		response = await fetch(SPOTIFY_API_BASE, {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${newToken}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(payload),
+		});
+	};
 
 	if (!response.ok) throw new Error(`Spotify API error -> ${response.statusText}`);
 
