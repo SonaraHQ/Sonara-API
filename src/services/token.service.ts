@@ -30,14 +30,14 @@ export async function getAccessToken(): Promise<string> {
 };
 
 export async function getWebApiToken(clientId?: string, clientSecret?: string): Promise<string> {
-	if (!clientId || !clientSecret) throw new Error("Missing client_id and client_secret in request; per-request credentials are required.");
-
-	const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-
-	const cached = WebApiTokenCache.get(auth);
-	if (cached) return cached;
-
 	try {
+		if (!clientId || !clientSecret) throw new Error("Missing client_id and client_secret in request; per-request credentials are required.");
+
+		const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+
+		const cached = WebApiTokenCache.get(auth);
+		if (cached) return cached;
+
 		const response = await fetch("https://accounts.spotify.com/api/token", {
 			method: "POST",
 			headers: {
