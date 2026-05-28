@@ -62,7 +62,7 @@ export async function fetchPlaylist(playlistId: string, limit: number = 100, aut
 			persistedQuery: {
 				version: 1,
 				sha256Hash:
-					"bb67e0af06e8d6f52b531f97468ee4acd44cd0f82b988e15c2ea47b1148efc77",
+					"a65e12194ed5fc443a1cdebed5fabe33ca5b07b987185d63c72483867ad13cb4",
 			},
 		},
 	};
