@@ -1,5 +1,5 @@
-import { fetchRecommendationsFull, fetchRecommendations, fetchPlaylistFull, fetchPlaylist } from "../services/spotify.service.js";
-import { extractPlaylistId, extractTrackId } from "../utils/extractors.js";
+import { fetchRecommendationsFull, fetchRecommendations, fetchPlaylistFull, fetchPlaylist } from "@/services/spotify.service.js";
+import { extractPlaylistId, extractTrackId } from "@/utils/extractors.js";
 import { Hono } from "hono";
 
 const router = new Hono();

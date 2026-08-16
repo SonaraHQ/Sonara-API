@@ -1,6 +1,6 @@
-import type { RecommendationRequestVariables, SpotifyRecommendations, SpotifyPlaylistTrackItem, PlaylistRequestVariables, SpotifyAPIRequest, SpotifyPlaylist, SpotifyTrack,} from "../types/spotify.js";
-import { transformRecommendationsResponse, transformPlaylistResponse } from "../utils/transformers.js";
-import { invalidateAccessTokenCache, getAccessToken, getWebApiToken } from "./token.service.js";
+import type { RecommendationRequestVariables, SpotifyRecommendations, SpotifyPlaylistTrackItem, PlaylistRequestVariables, SpotifyAPIRequest, SpotifyPlaylist, SpotifyTrack,} from "@/types/spotify.js";
+import { transformRecommendationsResponse, transformPlaylistResponse } from "@/utils/transformers.js";
+import { invalidateAccessTokenCache, getAccessToken, getWebApiToken } from "@/services/token.service.js";
 import { LRUCache } from "lru-cache";
 import fs from "node:fs/promises";
 import path from "node:path"; 

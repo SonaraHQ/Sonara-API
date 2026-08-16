@@ -7,14 +7,17 @@ Simple Spotify API resolver for playlists and track recommendations using Hono f
 - 🎵 Resolve Spotify playlists
 - 🎯 Get track recommendations
 - 🔄 Auto token management
-- ⚡ Built with Hono and Bun
+- ⚡ Built with Hono and Node.js
 - 📦 Returns standard Spotify Web API format
 
 ## Setup
 
+> [!NOTE]
+> Requires Node.js >= 22.18 (TypeScript files are run directly via Node's native type stripping).
+
 1. Install dependencies:
 ```bash
-bun install
+pnpm install
 ```
 
 2. Create `.env` file:
@@ -34,13 +37,40 @@ TOKEN_ENDPOINT=http://localhost:3000/spotifytoken
 
 ### Development
 ```bash
-bun run dev
+pnpm dev
 ```
 
 ### Production
 ```bash
-bun start
+pnpm start
 ```
+
+### Build (optional, compiles to `dist/`)
+```bash
+pnpm build
+node dist/index.js
+```
+
+## Import aliases
+
+Internal modules are imported through the `@/` alias (`@/*` → `src/*`, declared in `tsconfig.json`)
+instead of relative paths. Keep the `.js` extension — `module: NodeNext` requires it, and it points
+at the compiled output, not the source file:
+
+```ts
+import { config } from "@/config/env.js";
+import { getAccessToken } from "@/services/token.service.js";
+import type { SpotifyTrack } from "@/types/spotify.js";
+```
+
+> [!IMPORTANT]
+> `tsc` does **not** rewrite these aliases when it emits — `paths` only affects type resolution, so the
+> emitted JS would keep `@/config/env.js` verbatim and crash at runtime with `ERR_MODULE_NOT_FOUND`.
+> Two tools cover that gap, and the scripts must go through them:
+>
+> - **build** runs `tsc && tsc-alias` — `tsc-alias` rewrites `@/*` to relative paths in `dist/`.
+> - **dev / start** run through `tsx`, which reads `paths` from `tsconfig.json`. Plain `node src/index.ts`
+>   will not resolve the alias.
 
 ## API Endpoints
 

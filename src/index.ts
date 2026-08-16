@@ -1,4 +1,5 @@
-import spotifyRoutes from "./routes/spotify.routes.js";
+import spotifyRoutes from "@/routes/spotify.routes.js";
+import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import "dotenv/config";
 
@@ -33,5 +34,11 @@ const app = new Hono()
 		console.error(`Error: ${err.message}`);
 		return c.json({ error: err.message }, 500);
 	});
+
+const port = Number(process.env.PORT) || 3000;
+
+serve({ fetch: app.fetch, port }, (info) => {
+	console.log(`Listening on http://localhost:${info.port}`);
+});
 
 export default app;

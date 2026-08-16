@@ -1,4 +1,4 @@
-import type { PartnerRecommendationsResponse, PartnerRecommendationItem, RecommendationsResponse, PartnerArtist, PartnerImage, PartnerPlaylistItem, PartnerPlaylistResponse,SpotifyArtist, SpotifyPlaylist, SpotifyPlaylistTrackItem, SpotifyTrack } from "../types/spotify.js";
+import type { PartnerRecommendationsResponse, PartnerRecommendationItem, RecommendationsResponse, PartnerArtist, PartnerImage, PartnerPlaylistItem, PartnerPlaylistResponse,SpotifyArtist, SpotifyPlaylist, SpotifyPlaylistTrackItem, SpotifyTrack } from "@/types/spotify.js";
 
 export function transformPlaylistResponse(data: PartnerPlaylistResponse): SpotifyPlaylist {
 	const playlistData = data?.data?.playlistV2;

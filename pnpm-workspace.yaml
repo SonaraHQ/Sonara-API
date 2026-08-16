@@ -1,0 +1,4 @@
+# esbuild ships its platform binary via optionalDependencies, so its build
+# script is not needed for tsx to work. Declined to keep installs script-free.
+allowBuilds:
+  esbuild: false
