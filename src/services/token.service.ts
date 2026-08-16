@@ -15,7 +15,7 @@ export async function getAccessToken(): Promise<string> {
 		const cached = AccessTokenCache.get("token");
 		if (cached) return cached;
 
-		const response = await fetch(config.tokenEndpoint as string);
+		const response = await fetch(config.tokenEndpoint);
 		if (!response.ok) throw new Error(`Failed to fetch token -> ${response.statusText}`);
 
 		const data: TokenResponse = await response.json();
