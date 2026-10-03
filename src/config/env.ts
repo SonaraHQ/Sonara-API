@@ -1,10 +1,17 @@
-import "dotenv/config";
 import path from "node:path";
+
+// Native .env loading (no dotenv); the file is optional, real env vars take precedence
+try {
+	process.loadEnvFile();
+} catch (err) {
+	if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+};
 
 const HOUR = 3_600_000;
 
 function numberEnv(name: string, fallback: number): number {
-	const value = Number(process.env[name]);
+	const raw = process.env[name]?.trim();
+	const value = raw ? Number(raw) : Number.NaN;
 	return Number.isFinite(value) && value >= 0 ? value : fallback;
 };
 

@@ -16,7 +16,6 @@
     },
     "dependencies": {
         "@hono/node-server": "^2.1.1",
-        "dotenv": "^17.4.2",
         "hono": "^4.13.2",
         "lru-cache": "^11.5.2",
         "playwright": "^1.62.1"

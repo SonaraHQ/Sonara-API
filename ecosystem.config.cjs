@@ -19,7 +19,7 @@ module.exports = {
 			max_restarts: 10,
 			restart_delay: 2000,
 
-			// The app reads .env itself via `dotenv/config`.
+			// The app reads .env itself via `process.loadEnvFile()`.
 			env: {
 				NODE_ENV: "production",
 			},
