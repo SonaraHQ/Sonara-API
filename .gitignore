@@ -30,3 +30,5 @@ lerna-debug.log*
 # misc
 .DS_Store
 .vercel
+# runtime cache
+cache/

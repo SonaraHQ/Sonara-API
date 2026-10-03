@@ -212,6 +212,7 @@ export interface PartnerPlaylistResponse {
 		playlistV2?: {
 			content?: {
 				items?: PartnerPlaylistItem[];
+				totalCount?: number;
 			};
 			// optional metadata mirrored from the Web API
 			uri?: string;
@@ -252,7 +253,8 @@ export interface PartnerRecommendationsResponse {
 export type PlaylistRequestVariables = {
 	uri: string;
 	enableWatchFeedEntrypoint: boolean;
-	limit: number,
+	limit: number;
+	offset?: number;
 };
 
 export type RecommendationRequestVariables = {

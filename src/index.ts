@@ -1,9 +1,17 @@
+import { config } from "@/config/env.js";
 import spotifyRoutes from "@/routes/spotify.routes.js";
+import { pruneDiskCache } from "@/services/cache.service.js";
+import { tokenHandler } from "@/token/index.js";
+import { logs } from "@/utils/logger.js";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
-import "dotenv/config";
+import { compress } from "hono/compress";
+
+const PRUNE_INTERVAL_MS = 6 * 3_600_000;
 
 const app = new Hono()
+	// Playlist payloads are large JSON: gzip cuts them by ~90% when the client accepts it
+	.use(compress())
 	.get("/", (c) => {
 		return c.json({
 			name: "Solify - Spotify Resolver API",
@@ -23,22 +31,42 @@ const app = new Hono()
 					byId: "/recommendations/:id?limit=5",
 					byUrl: "/recommendations?url=<spotify-track-url>&limit=5",
 				},
+				recommendationsFull: {
+					byId: "/recommendations/full/:id?limit=5",
+					byUrl: "/recommendations/full?url=<spotify-track-url>&limit=5",
+				},
+				token: {
+					access: "/spotifytoken",
+					client: "/clienttoken",
+				},
 			},
 		});
 	})
+	.get("/spotifytoken", tokenHandler.honoHandler)
+	.get("/clienttoken", tokenHandler.clientTokenHonoHandler)
 	.route("/", spotifyRoutes)
 	.notFound((c) => {
 		return c.json({ error: "Not Found" }, 404);
 	})
 	.onError((err, c) => {
-		console.error(`Error: ${err.message}`);
+		logs("error", err.message);
 		return c.json({ error: err.message }, 500);
 	});
 
-const port = Number(process.env.PORT) || 3000;
-
-serve({ fetch: app.fetch, port }, (info) => {
-	console.log(`Listening on http://localhost:${info.port}`);
+serve({ fetch: app.fetch, port: config.port }, (info) => {
+	logs("info", `Listening on http://localhost:${info.port}`);
 });
+
+void pruneDiskCache();
+setInterval(() => void pruneDiskCache(), PRUNE_INTERVAL_MS).unref();
+
+async function cleanup() {
+	logs("info", "Shutting down server...");
+	await tokenHandler.cleanup();
+	process.exit(0);
+};
+
+process.on("SIGINT", cleanup);
+process.on("SIGTERM", cleanup);
 
 export default app;
