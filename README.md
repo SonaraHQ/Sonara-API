@@ -12,9 +12,11 @@ Self-hosted Spotify resolver API: full playlists, recommendations and lyrics, wi
 
 ## Quick start
 
-Requires Node.js 24 or later.
+Requires Node.js 24 or later. [nvm](https://github.com/nvm-sh/nvm) ([nvm-windows](https://github.com/coreybutler/nvm-windows) on Windows)
+installs and switches Node.js versions: `nvm install 24`.
 
 ```bash
+corepack enable   # provides the pnpm version of package.json
 pnpm install
 pnpm install:browser
 cp .env.example .env

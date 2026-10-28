@@ -9,8 +9,6 @@
         "types": [
         "node"
         ],
-        "jsx": "react-jsx",
-        "jsxImportSource": "hono/jsx",
         "paths": {
             "@/*": ["./src/*"]
         },

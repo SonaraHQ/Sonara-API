@@ -1,6 +1,8 @@
 FROM node:24-bookworm-slim AS base
 WORKDIR /app
-RUN npm install -g pnpm@11.21.0
+# pnpm at the version of the `packageManager` field
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable
 
 FROM base AS build
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
