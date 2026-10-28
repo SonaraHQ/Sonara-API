@@ -2,6 +2,7 @@ import type { SpotifyToken, SpotifyClientToken } from "@/types/token.js";
 import { getConnInfo } from "@hono/node-server/conninfo";
 import { SpotifyBrowser } from "@/token/browser.js";
 import { TokenSlot } from "@/token/request.js";
+import { config } from "@/config/env.js";
 import { logs } from "@/utils/logger.js";
 import type { Context } from "hono";
 
@@ -20,9 +21,19 @@ export class SpotifyTokenHandler {
 		(token) => token.refreshAfterTimestampMs ?? token.accessTokenExpirationTimestampMs - REFRESH_MARGIN_MS,
 	);
 
+	// Logged-in token for lyrics, only when SPOTIFY_SP_DC is set
+	public readonly account: TokenSlot<SpotifyToken> | undefined = config.spotifySpDc
+		? new TokenSlot<SpotifyToken>(
+				"account",
+				() => this.browser.fetchAccountToken(config.spotifySpDc!),
+				(token) => token.accessTokenExpirationTimestampMs - REFRESH_MARGIN_MS,
+			)
+		: undefined;
+
 	constructor() {
 		void this.warmUp(this.access);
 		void this.warmUp(this.client);
+		if (this.account) void this.warmUp(this.account);
 	};
 
 	private async warmUp<T extends SpotifyToken>(slot: TokenSlot<T>): Promise<void> {
@@ -42,6 +53,7 @@ export class SpotifyTokenHandler {
 	public async cleanup(): Promise<void> {
 		this.access.stop();
 		this.client.stop();
+		this.account?.stop();
 		await this.browser.close();
 	};
 
@@ -52,6 +64,23 @@ export class SpotifyTokenHandler {
 
 	public invalidate(): void {
 		this.access.invalidate();
+	};
+
+	public hasAccount(): boolean {
+		return this.account !== undefined;
+	};
+
+	public async getAccountToken(): Promise<SpotifyToken> {
+		if (!this.account) throw new Error("SPOTIFY_SP_DC is not set");
+		return this.account.get();
+	};
+
+	public invalidateAccount(): void {
+		this.account?.invalidate();
+	};
+
+	public async getClientToken(): Promise<SpotifyClientToken> {
+		return this.client.get();
 	};
 
 	public honoHandler = (c: Context) => this.serve(c, this.access, (token) => token);

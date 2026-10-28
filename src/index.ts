@@ -35,6 +35,11 @@ const app = new Hono()
 					byId: "/recommendations/full/:id?limit=5",
 					byUrl: "/recommendations/full?url=<spotify-track-url>&limit=5",
 				},
+				lyrics: {
+					byId: "/lyrics/:id",
+					byUrl: "/lyrics?url=<spotify-track-url>",
+					notes: "Requires SPOTIFY_SP_DC",
+				},
 				token: {
 					access: "/spotifytoken",
 					client: "/clienttoken",
