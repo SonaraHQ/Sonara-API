@@ -22,3 +22,7 @@ updates:
       directory: /
       schedule:
           interval: monthly
+      ignore:
+          # Moving to another Node.js major (and only to an LTS one) is a manual choice
+          - dependency-name: node
+            update-types: ["version-update:semver-major"]
