@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Docker images for `amd64` and `arm64` published on GitHub Container Registry (`ghcr.io/sonarahq/sonara-api`) for every release.
+- Dependabot updates and a security policy.
+
+### Changed
+
+- The Docker image is based on `node:22-bookworm-slim` with the Chromium headless shell only, instead of the full Playwright image.
+
 ## 1.2.0
 
 ### Added
