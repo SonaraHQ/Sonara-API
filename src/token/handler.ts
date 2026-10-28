@@ -1,35 +1,49 @@
 import type { SpotifyToken, SpotifyClientToken } from "@/types/token.js";
-import { getConnInfo } from "@hono/node-server/conninfo";
+import { setTimeout as sleep } from "node:timers/promises";
 import { SpotifyBrowser } from "@/token/browser.js";
 import { TokenSlot } from "@/token/request.js";
 import { config } from "@/config/env.js";
+import { clientIp } from "@/utils/ip.js";
 import { logs } from "@/utils/logger.js";
 import type { Context } from "hono";
 
 // Refresh this long before expiry so callers never get a stale token
 const REFRESH_MARGIN_MS = 60_000;
 const INIT_ATTEMPTS = 3;
+const SP_DC = config.spotifySpDc;
+
+type AnonymousTokens = { access: SpotifyToken; client: SpotifyClientToken };
 
 export class SpotifyTokenHandler {
 	private browser = new SpotifyBrowser();
+	private anonymous: Promise<AnonymousTokens> | undefined;
 
-	public readonly access = new TokenSlot<SpotifyToken>(
+	// Both anonymous tokens come from the same page load: whichever slot refreshes also feeds the other
+	public readonly access: TokenSlot<SpotifyToken> = new TokenSlot<SpotifyToken>(
 		"access",
-		() => this.browser.fetchToken(),
+		async () => {
+			const { access, client } = await this.fetchAnonymous();
+			this.client.offer(client);
+			return access;
+		},
 		(token) => token.accessTokenExpirationTimestampMs - REFRESH_MARGIN_MS,
 	);
 
-	public readonly client = new TokenSlot<SpotifyClientToken>(
+	public readonly client: TokenSlot<SpotifyClientToken> = new TokenSlot<SpotifyClientToken>(
 		"client",
-		() => this.browser.fetchClientToken(),
+		async () => {
+			const { access, client } = await this.fetchAnonymous();
+			this.access.offer(access);
+			return client;
+		},
 		(token) => token.refreshAfterTimestampMs ?? token.accessTokenExpirationTimestampMs - REFRESH_MARGIN_MS,
 	);
 
 	// Logged-in token for lyrics, only when SPOTIFY_SP_DC is set
-	public readonly account: TokenSlot<SpotifyToken> | undefined = config.spotifySpDc
+	public readonly account: TokenSlot<SpotifyToken> | undefined = SP_DC
 		? new TokenSlot<SpotifyToken>(
 				"account",
-				() => this.browser.fetchAccountToken(config.spotifySpDc!),
+				() => this.browser.fetchAccountToken(SP_DC),
 				(token) => token.accessTokenExpirationTimestampMs - REFRESH_MARGIN_MS,
 			)
 		: undefined;
@@ -38,6 +52,14 @@ export class SpotifyTokenHandler {
 		void this.warmUp(this.access);
 		void this.warmUp(this.client);
 		if (this.account) void this.warmUp(this.account);
+	}
+
+	// Both slots refreshing at once share a single browser launch
+	private fetchAnonymous(): Promise<AnonymousTokens> {
+		this.anonymous ??= this.browser.fetchAnonymousTokens().finally(() => {
+			this.anonymous = undefined;
+		});
+		return this.anonymous;
 	}
 
 	private async warmUp<T extends SpotifyToken>(slot: TokenSlot<T>): Promise<void> {
@@ -49,7 +71,7 @@ export class SpotifyTokenHandler {
 				return;
 			} catch (err) {
 				logs("warn", `Failed to fetch initial Spotify ${slot.name} token (attempt ${attempt})`, err);
-				if (attempt < INIT_ATTEMPTS) await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
+				if (attempt < INIT_ATTEMPTS) await sleep(2000 * attempt);
 			}
 		}
 	}
@@ -61,20 +83,19 @@ export class SpotifyTokenHandler {
 		await this.browser.close();
 	}
 
-	// In-process access for the resolver (replaces the HTTP call to /spotifytoken)
 	public async getToken(): Promise<SpotifyToken> {
 		return this.access.get();
 	}
 
-	public invalidate(): void {
-		this.access.invalidate();
+	public invalidate(accessToken: string): void {
+		this.access.invalidate(accessToken);
 	}
 
 	public hasAccount(): boolean {
 		return this.account !== undefined;
 	}
 
-	// Token availability for /health, read from memory only
+	// Read from memory only, never triggers a fetch
 	public status(): { access: boolean; client: boolean; account?: boolean } {
 		return { access: this.access.isReady(), client: this.client.isReady(), ...(this.account && { account: this.account.isReady() }) };
 	}
@@ -84,8 +105,8 @@ export class SpotifyTokenHandler {
 		return this.account.get();
 	}
 
-	public invalidateAccount(): void {
-		this.account?.invalidate();
+	public invalidateAccount(accessToken: string): void {
+		this.account?.invalidate(accessToken);
 	}
 
 	public async getClientToken(): Promise<SpotifyClientToken> {
@@ -96,28 +117,13 @@ export class SpotifyTokenHandler {
 
 	public clientTokenHonoHandler = (c: Context) => this.serve(c, this.client, (token) => token.raw);
 
+	// A failure is thrown to the app's error handler, which answers 503 with the reason
 	private async serve<T extends SpotifyToken>(c: Context, slot: TokenSlot<T>, serialize: (token: T) => unknown): Promise<Response> {
 		const start = Date.now();
-
-		let response: Response;
 		try {
-			response = c.json(serialize(await slot.get()), 200);
-		} catch (err) {
-			logs("error", err);
-			response = c.json({}, 500);
+			return c.json(serialize(await slot.get()), 200);
+		} finally {
+			logs("info", `Handled Spotify ${slot.name} token request from IP: ${clientIp(c)}, UA: ${c.req.header("user-agent") ?? "no ua"} in ${Date.now() - start}ms`);
 		}
-
-		logs("info", `Handled Spotify ${slot.name} token request from IP: ${getRealIp(c)}, UA: ${c.req.header("user-agent") ?? "no ua"} in ${Date.now() - start}ms`);
-		return response;
 	}
 }
-
-const getRealIp = (c: Context): string => {
-	const xff = c.req.header("x-forwarded-for");
-	let ip = xff?.split(",")[0]?.trim() || c.req.header("x-real-ip") || getConnInfo(c)?.remote?.address || "unknown";
-
-	if (ip === "::1") ip = "127.0.0.1";
-	if (ip.startsWith("::ffff:")) ip = ip.slice(7);
-
-	return ip;
-};

@@ -1,3 +1,5 @@
+import { fetchWithRetry, upstreamError } from "@/utils/http.js";
+import { HTTPException } from "hono/http-exception";
 import { tokenHandler } from "@/token/index.js";
 import { LRUCache } from "lru-cache";
 
@@ -5,16 +7,11 @@ const WebApiTokenCache = new LRUCache<string, string>({ max: 100 });
 const pendingWebApiTokens = new Map<string, Promise<string>>();
 
 export async function getAccessToken(): Promise<string> {
-	try {
-		const token = await tokenHandler.getToken();
-		return token.accessToken;
-	} catch (error) {
-		throw new Error(`Error fetching Spotify token -> ${error}`);
-	}
+	return (await tokenHandler.getToken()).accessToken;
 }
 
 async function requestWebApiToken(auth: string): Promise<string> {
-	const response = await fetch("https://accounts.spotify.com/api/token", {
+	const response = await fetchWithRetry("Spotify Web API token", "https://accounts.spotify.com/api/token", {
 		method: "POST",
 		headers: {
 			Authorization: `Basic ${auth}`,
@@ -23,10 +20,9 @@ async function requestWebApiToken(auth: string): Promise<string> {
 		body: new URLSearchParams({ grant_type: "client_credentials" }).toString(),
 	});
 
-	if (!response.ok) {
-		const text = await response.text();
-		throw new Error(`Failed to fetch Spotify Web API token -> ${response.status} ${response.statusText} - ${text}.`);
-	}
+	// 400/401 here means the client_id/client_secret sent by the caller are wrong
+	if (response.status === 400 || response.status === 401) throw await upstreamError("Invalid client_id or client_secret", response, 401);
+	if (!response.ok) throw await upstreamError("Spotify Web API token", response);
 
 	const data = (await response.json()) as { access_token: string; expires_in: number };
 
@@ -37,7 +33,7 @@ async function requestWebApiToken(auth: string): Promise<string> {
 }
 
 export async function getWebApiToken(clientId?: string, clientSecret?: string): Promise<string> {
-	if (!clientId || !clientSecret) throw new Error("Missing client_id and client_secret in request; per-request credentials are required.");
+	if (!clientId || !clientSecret) throw new HTTPException(400, { message: "Missing client_id and client_secret in request; per-request credentials are required." });
 
 	const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 
@@ -51,13 +47,9 @@ export async function getWebApiToken(clientId?: string, clientSecret?: string): 
 		pendingWebApiTokens.set(auth, pending);
 	}
 
-	try {
-		return await pending;
-	} catch (error) {
-		throw new Error(`Error fetching Spotify Web API token -> ${error}.`);
-	}
+	return pending;
 }
 
-export function invalidateAccessTokenCache() {
-	tokenHandler.invalidate();
+export function invalidateAccessTokenCache(accessToken: string) {
+	tokenHandler.invalidate(accessToken);
 }

@@ -11,13 +11,12 @@ function extractId(input: string, kind: "playlist" | "track"): string {
 	if (!input) return input;
 
 	// Drop query/fragment and accidental appended params like `&limit=5`
-	const clean = safeDecode(input).trim().split(/[?#&]/)[0]!.replace(/\/$/, "");
+	const clean = safeDecode(input)
+		.trim()
+		.replace(/[?#&].*/s, "")
+		.replace(/\/$/, "");
 
-	const match = clean.match(new RegExp(`(?:spotify:${kind}:|${kind}/)([A-Za-z0-9]+)`));
-	if (match) return match[1]!;
-
-	const idMatch = clean.match(/^([A-Za-z0-9_-]{8,})$/);
-	return idMatch ? idMatch[1]! : clean;
+	return clean.match(new RegExp(`(?:spotify:${kind}:|${kind}/)([A-Za-z0-9]+)`))?.[1] ?? clean;
 }
 
 export function extractPlaylistId(input: string): string {

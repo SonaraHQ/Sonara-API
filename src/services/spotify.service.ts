@@ -1,88 +1,108 @@
 import type {
 	RecommendationRequestVariables,
-	SpotifyRecommendations,
+	PartnerRecommendationsResponse,
+	RecommendationsResponse,
 	PartnerPlaylistResponse,
 	PlaylistRequestVariables,
 	SpotifyAPIRequest,
 	SpotifyPlaylist,
+	PartnerErrors,
 	SpotifyTrack,
 } from "@/types/spotify.js";
 import { transformRecommendationsResponse, transformPlaylistResponse } from "@/utils/transformers.js";
 import { invalidateAccessTokenCache, getAccessToken, getWebApiToken } from "@/services/token.service.js";
-import { Cache } from "@/services/cache.service.js";
+import { Cache, type CacheEntry } from "@/services/cache.service.js";
+import { fetchWithRetry, upstreamError } from "@/utils/http.js";
+import { isDynamicPlaylist } from "@/utils/playlists.js";
+import { HTTPException } from "hono/http-exception";
+import { config, HOUR } from "@/config/env.js";
 
 const SPOTIFY_API_BASE = "https://api-partner.spotify.com/pathfinder/v2/query";
 const SPOTIFY_WEB_API_BASE = "https://api.spotify.com/v1";
 
-const PLAYLIST_HASH = "a65e12194ed5fc443a1cdebed5fabe33ca5b07b987185d63c72483867ad13cb4";
-const RECOMMENDATIONS_HASH = "c77098ee9d6ee8ad3eb844938722db60570d040b49f41f5ec6e7be9160a7c86b";
-
-const PLAYLIST_PAGE_SIZE = 1_000;
+// Partner API (undocumented) max page size, Spotify rejects anything above
+const PLAYLIST_PAGE_SIZE = 5_000;
 const MAX_PLAYLIST_TRACKS = 10_000;
+export const MAX_RECOMMENDATIONS = 100;
 // Web API `GET /tracks` accepts at most 50 ids per call
 const WEB_API_BATCH_SIZE = 50;
 // Mixes and radios change often: memory only, short lifetime
-const DYNAMIC_TTL_MS = 3_600_000;
+const DYNAMIC_TTL_MS = HOUR;
 
-const playlistCache = new Cache<SpotifyPlaylist>({ disk: "playlists" });
-const playlistFullCache = new Cache<SpotifyPlaylist>({ disk: "playlists-full" });
-const recommendationsCache = new Cache<SpotifyRecommendations>({ disk: "recommendations" });
-const recommendationsFullCache = new Cache<SpotifyRecommendations>({ disk: "recommendations-full" });
-
-function isDynamicPlaylist(playlist: SpotifyPlaylist): boolean {
-	const name = playlist.name?.toLowerCase() ?? "";
-	return name.includes("mix") || name.includes("radio");
-}
+const playlistCache = new Cache<SpotifyPlaylist>("playlists");
+const playlistFullCache = new Cache<SpotifyPlaylist>("playlists-full");
+// Recommendations are fetched once at MAX_RECOMMENDATIONS: Spotify returns the same ranking
+// for any limit, so each `limit` is a prefix of it and is served from a memory-only slice
+const recommendationsCache = new Cache<RecommendationsResponse>("recommendations");
+const recommendationsFullCache = new Cache<RecommendationsResponse>("recommendations-full");
+const recommendationsSliceCache = new Cache<RecommendationsResponse>("recommendations-slices", { disk: false });
 
 function cacheOptions(playlist: SpotifyPlaylist) {
 	return isDynamicPlaylist(playlist) ? { ttl: DYNAMIC_TTL_MS, persist: false } : {};
 }
 
+function graphqlErrors(response: PartnerErrors): string | undefined {
+	return response.errors?.length ? response.errors.map((error) => error.message ?? "unknown error").join(", ") : undefined;
+}
+
 // Partner API call, retried once with a fresh token on 401
-async function partnerQuery<TResponse, TVariables extends SpotifyAPIRequest["variables"]>(operationName: string, sha256Hash: string, variables: TVariables): Promise<TResponse> {
+async function partnerQuery<TResponse extends PartnerErrors & { data?: unknown }, TVariables extends SpotifyAPIRequest["variables"]>(
+	operationName: string,
+	sha256Hash: string,
+	variables: TVariables,
+): Promise<TResponse> {
 	const payload: SpotifyAPIRequest<TVariables> = {
 		variables,
 		operationName,
 		extensions: { persistedQuery: { version: 1, sha256Hash } },
 	};
 	const body = JSON.stringify(payload);
-	const send = async () =>
-		fetch(SPOTIFY_API_BASE, {
+	const label = `Spotify API ${operationName}`;
+	const send = async () => {
+		const token = await getAccessToken();
+		const response = await fetchWithRetry(label, SPOTIFY_API_BASE, {
 			method: "POST",
 			headers: {
-				Authorization: `Bearer ${await getAccessToken()}`,
+				Authorization: `Bearer ${token}`,
 				"Content-Type": "application/json",
 			},
 			body,
 		});
+		return { token, response };
+	};
 
-	let response = await send();
+	const first = await send();
+	let response = first.response;
 	if (response.status === 401) {
-		invalidateAccessTokenCache();
-		response = await send();
+		invalidateAccessTokenCache(first.token);
+		response = (await send()).response;
 	}
 
-	if (!response.ok) throw new Error(`Spotify API error -> ${response.status} ${response.statusText}`);
-	return (await response.json()) as TResponse;
+	if (!response.ok) throw await upstreamError(label, response);
+
+	const json = (await response.json()) as TResponse;
+	// No data at all (e.g. outdated persisted query hash): fail instead of caching an empty result
+	const errors = graphqlErrors(json);
+	if (errors && !json.data) throw new HTTPException(502, { message: `${label} -> ${errors}` });
+	return json;
 }
 
-// Full Web API track objects, fetched in parallel batches
 async function fetchTracksFull(ids: string[], clientId?: string, clientSecret?: string): Promise<SpotifyTrack[]> {
 	const token = await getWebApiToken(clientId, clientSecret);
+	const label = "Spotify Web API tracks";
 
 	const batches: string[][] = [];
 	for (let i = 0; i < ids.length; i += WEB_API_BATCH_SIZE) batches.push(ids.slice(i, i + WEB_API_BATCH_SIZE));
 
+	// All batches at once, 429s are retried by fetchWithRetry
 	const results = await Promise.all(
 		batches.map(async (batch) => {
-			const response = await fetch(`${SPOTIFY_WEB_API_BASE}/tracks?ids=${encodeURIComponent(batch.join(","))}`, {
+			const market = config.spotifyMarket ? `&market=${config.spotifyMarket}` : "";
+			const response = await fetchWithRetry(label, `${SPOTIFY_WEB_API_BASE}/tracks?ids=${encodeURIComponent(batch.join(","))}${market}`, {
 				headers: { Authorization: `Bearer ${token}` },
 			});
 
-			if (!response.ok) {
-				const text = await response.text();
-				throw new Error(`Spotify Web API error -> ${response.status} ${response.statusText} - ${text}`);
-			}
+			if (!response.ok) throw await upstreamError(label, response);
 
 			const data = (await response.json()) as { tracks?: (SpotifyTrack | null)[] };
 			return (data.tracks ?? []).filter((track): track is SpotifyTrack => Boolean(track));
@@ -93,40 +113,47 @@ async function fetchTracksFull(ids: string[], clientId?: string, clientSecret?: 
 }
 
 async function loadPlaylist(playlistId: string): Promise<SpotifyPlaylist> {
-	const page = (offset: number) =>
-		partnerQuery<PartnerPlaylistResponse, PlaylistRequestVariables>("fetchPlaylist", PLAYLIST_HASH, {
+	// Every page must carry content, otherwise the playlist would be cached empty or truncated
+	const page = async (offset: number) => {
+		const response = await partnerQuery<PartnerPlaylistResponse, PlaylistRequestVariables>("fetchPlaylist", config.playlistHash, {
 			uri: `spotify:playlist:${playlistId}`,
 			enableWatchFeedEntrypoint: false,
 			limit: PLAYLIST_PAGE_SIZE,
 			offset,
 		});
 
-	const first = await page(0);
-	const content = first.data?.playlistV2?.content;
-	const total = Math.min(content?.totalCount ?? 0, MAX_PLAYLIST_TRACKS);
-	// Step on what Spotify actually returned, in case it caps the page below PLAYLIST_PAGE_SIZE
-	const step = content?.items?.length || PLAYLIST_PAGE_SIZE;
+		const playlist = response.data?.playlistV2;
+		if (playlist?.content) return { response, content: playlist.content };
 
-	// Remaining pages in parallel, then merged into the first response
+		const errors = graphqlErrors(response);
+		if (errors) throw new HTTPException(502, { message: `Spotify API fetchPlaylist -> ${errors}` });
+		throw new HTTPException(404, { message: `Playlist not found or private -> ${playlistId}${playlist?.__typename ? ` (${playlist.__typename})` : ""}` });
+	};
+
+	const { response: first, content } = await page(0);
+	const total = Math.min(content.totalCount ?? 0, MAX_PLAYLIST_TRACKS);
+	// Step on what Spotify actually returned, in case it caps the page below PLAYLIST_PAGE_SIZE
+	const step = content.items?.length || PLAYLIST_PAGE_SIZE;
+
 	const offsets: number[] = [];
 	for (let offset = step; offset < total; offset += step) offsets.push(offset);
 
 	const rest = await Promise.all(offsets.map(page));
-	if (content?.items) for (const next of rest) content.items.push(...(next.data?.playlistV2?.content?.items ?? []));
+	if (content.items) for (const next of rest) content.items.push(...(next.content.items ?? []));
 
 	return transformPlaylistResponse(first);
 }
 
-export async function fetchPlaylist(playlistId: string): Promise<SpotifyPlaylist> {
+export async function fetchPlaylist(playlistId: string): Promise<CacheEntry> {
 	return playlistCache.getOrLoad(playlistId, async () => {
 		const playlist = await loadPlaylist(playlistId);
 		return { value: playlist, ...cacheOptions(playlist) };
 	});
 }
 
-export async function fetchPlaylistFull(playlistId: string, clientId?: string, clientSecret?: string): Promise<SpotifyPlaylist> {
+export async function fetchPlaylistFull(playlistId: string, clientId?: string, clientSecret?: string): Promise<CacheEntry> {
 	return playlistFullCache.getOrLoad(playlistId, async () => {
-		const playlist = await fetchPlaylist(playlistId);
+		const playlist = playlistCache.value(await fetchPlaylist(playlistId));
 		const items = playlist.tracks?.items ?? [];
 		const ids = items.map((item) => item.track?.id).filter((id): id is string => Boolean(id));
 
@@ -138,32 +165,53 @@ export async function fetchPlaylistFull(playlistId: string, clientId?: string, c
 			return full ? { ...item, track: full } : item;
 		});
 
-		// New object: the light playlist stays untouched in its own cache
 		const full: SpotifyPlaylist = { ...playlist, tracks: { ...playlist.tracks, items: mergedItems, total: mergedItems.length } };
 		return { value: full, ...cacheOptions(full) };
 	});
 }
 
-export async function fetchRecommendations(trackId: string, limit = 5): Promise<SpotifyRecommendations> {
-	return recommendationsCache.getOrLoad(`${trackId}_${limit}`, async () => {
-		const data = await partnerQuery<Parameters<typeof transformRecommendationsResponse>[0], RecommendationRequestVariables>(
-			"internalLinkRecommenderTrack",
-			RECOMMENDATIONS_HASH,
-			{ uri: `spotify:track:${trackId}`, limit },
-		);
+function sliceRecommendations(recommendations: RecommendationsResponse, limit: number): RecommendationsResponse {
+	const tracks = recommendations.tracks.slice(0, limit);
+	const size = tracks.length;
+	return {
+		seeds: recommendations.seeds.map((seed) => ({ ...seed, initialPoolSize: size, afterFilteringSize: size, afterRelinkingSize: size })),
+		tracks,
+	};
+}
+
+async function allRecommendations(trackId: string): Promise<RecommendationsResponse> {
+	const entry = await recommendationsCache.getOrLoad(trackId, async () => {
+		const data = await partnerQuery<PartnerRecommendationsResponse, RecommendationRequestVariables>("internalLinkRecommenderTrack", config.recommendationsHash, {
+			uri: `spotify:track:${trackId}`,
+			limit: MAX_RECOMMENDATIONS,
+		});
 		const recommendations = transformRecommendationsResponse(data, trackId);
 		// Empty answers are usually transient: keep them out of the disk cache
 		return { value: recommendations, persist: recommendations.tracks.length > 0 };
 	});
+	return recommendationsCache.value(entry);
 }
 
-export async function fetchRecommendationsFull(trackId: string, limit = 5, clientId?: string, clientSecret?: string): Promise<SpotifyRecommendations> {
-	return recommendationsFullCache.getOrLoad(`${trackId}_${limit}`, async () => {
-		const rec = await fetchRecommendations(trackId, limit);
-		const ids = rec.tracks.map((track) => track.id).filter(Boolean);
+async function allRecommendationsFull(trackId: string, clientId?: string, clientSecret?: string): Promise<RecommendationsResponse> {
+	const entry = await recommendationsFullCache.getOrLoad(trackId, async () => {
+		const recommendations = await allRecommendations(trackId);
+		const ids = recommendations.tracks.map((track) => track.id).filter(Boolean);
 
-		if (!ids.length) return { value: { seeds: rec.seeds, tracks: [] }, persist: false };
+		if (!ids.length) return { value: { seeds: recommendations.seeds, tracks: [] }, persist: false };
 
-		return { value: { seeds: rec.seeds, tracks: await fetchTracksFull(ids, clientId, clientSecret) } };
+		return { value: { seeds: recommendations.seeds, tracks: await fetchTracksFull(ids, clientId, clientSecret) } };
 	});
+	return recommendationsFullCache.value(entry);
+}
+
+export async function fetchRecommendations(trackId: string, limit = 5): Promise<CacheEntry> {
+	return recommendationsSliceCache.getOrLoad(`light:${trackId}_${limit}`, async () => ({
+		value: sliceRecommendations(await allRecommendations(trackId), limit),
+	}));
+}
+
+export async function fetchRecommendationsFull(trackId: string, limit = 5, clientId?: string, clientSecret?: string): Promise<CacheEntry> {
+	return recommendationsSliceCache.getOrLoad(`full:${trackId}_${limit}`, async () => ({
+		value: sliceRecommendations(await allRecommendationsFull(trackId, clientId, clientSecret), limit),
+	}));
 }

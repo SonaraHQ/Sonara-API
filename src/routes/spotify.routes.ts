@@ -1,12 +1,22 @@
-import { fetchRecommendationsFull, fetchRecommendations, fetchPlaylistFull, fetchPlaylist } from "@/services/spotify.service.js";
+import { fetchRecommendationsFull, fetchRecommendations, fetchPlaylistFull, fetchPlaylist, MAX_RECOMMENDATIONS } from "@/services/spotify.service.js";
 import { fetchLyrics, lyricsEnabled } from "@/services/lyrics.service.js";
 import { extractPlaylistId, extractTrackId } from "@/utils/extractors.js";
+import type { CacheEntry } from "@/services/cache.service.js";
+import { etagMatches } from "@/utils/http.js";
 import { Hono, type Context } from "hono";
 
 const ID_PATTERN = /^[A-Za-z0-9_-]{8,}$/;
-const MAX_RECOMMENDATIONS = 100;
 
 type Kind = "playlist" | "track";
+
+// Cached JSON is sent as is, and a client that already has this version gets a 304
+function sendEntry(c: Context, entry: CacheEntry): Response {
+	c.header("ETag", entry.etag);
+	if (etagMatches(c.req.header("if-none-match"), entry.etag)) return c.body(null, 304);
+
+	c.header("Content-Type", "application/json; charset=UTF-8");
+	return c.body(entry.body);
+}
 
 // Id from the `:id` path param or the `url` query param, or an error response
 function resolveId(c: Context, kind: Kind): string | Response {
@@ -33,7 +43,6 @@ function resolveLimit(c: Context): number {
 }
 
 const router = new Hono();
-
 router.get("/playlist/full/:id?", async (c) => {
 	const id = resolveId(c, "playlist");
 	if (id instanceof Response) return id;
@@ -41,14 +50,14 @@ router.get("/playlist/full/:id?", async (c) => {
 	const credentials = resolveCredentials(c);
 	if (credentials instanceof Response) return credentials;
 
-	return c.json(await fetchPlaylistFull(id, credentials.clientId, credentials.clientSecret));
+	return sendEntry(c, await fetchPlaylistFull(id, credentials.clientId, credentials.clientSecret));
 });
 
 router.get("/playlist/:id?", async (c) => {
 	const id = resolveId(c, "playlist");
 	if (id instanceof Response) return id;
 
-	return c.json(await fetchPlaylist(id));
+	return sendEntry(c, await fetchPlaylist(id));
 });
 
 router.get("/recommendations/full/:id?", async (c) => {
@@ -58,14 +67,14 @@ router.get("/recommendations/full/:id?", async (c) => {
 	const credentials = resolveCredentials(c);
 	if (credentials instanceof Response) return credentials;
 
-	return c.json(await fetchRecommendationsFull(id, resolveLimit(c), credentials.clientId, credentials.clientSecret));
+	return sendEntry(c, await fetchRecommendationsFull(id, resolveLimit(c), credentials.clientId, credentials.clientSecret));
 });
 
 router.get("/recommendations/:id?", async (c) => {
 	const id = resolveId(c, "track");
 	if (id instanceof Response) return id;
 
-	return c.json(await fetchRecommendations(id, resolveLimit(c)));
+	return sendEntry(c, await fetchRecommendations(id, resolveLimit(c)));
 });
 
 router.get("/lyrics/:id?", async (c) => {

@@ -89,18 +89,6 @@ export interface SpotifyPlaylistTrackItem {
 	video_thumbnail?: { url?: string | null };
 }
 
-export type SpotifyRecommendations = {
-	seeds: {
-		afterFilteringSize: number;
-		afterRelinkingSize: number;
-		href: string;
-		id: string;
-		initialPoolSize: number;
-		type: "track";
-	}[];
-	tracks: SpotifyTrack[];
-};
-
 export interface SpotifyPlaylist {
 	collaborative: boolean;
 	description: string | null;
@@ -197,7 +185,6 @@ export interface PartnerPlaylistItem {
 		data?: PartnerTrackData;
 	};
 
-	// optional metadata included by partner responses
 	addedAt?: string;
 	added_at?: string;
 	addedBy?: {
@@ -207,14 +194,20 @@ export interface PartnerPlaylistItem {
 	};
 }
 
-export interface PartnerPlaylistResponse {
+// GraphQL errors, sent with a 200 (unknown persisted query hash, invalid variables...)
+export interface PartnerErrors {
+	errors?: { message?: string }[];
+}
+
+export interface PartnerPlaylistResponse extends PartnerErrors {
 	data?: {
 		playlistV2?: {
+			// "Playlist", or an error type such as "GenericError" when the playlist is private or deleted
+			__typename?: string;
 			content?: {
 				items?: PartnerPlaylistItem[];
 				totalCount?: number;
 			};
-			// optional metadata mirrored from the Web API
 			uri?: string;
 			name?: string;
 			description?: string;
@@ -229,21 +222,19 @@ export interface PartnerPlaylistResponse {
 }
 
 export interface PartnerRecommendationItem {
-	// some partner persisted queries return items wrapped as { content: { data: ... } }
-	// while others return { data: ... } at the top level. Support both shapes.
+	// Depending on the persisted query, items are `{ content: { data } }` or `{ data }`
 	content?: {
 		data?: PartnerTrackData;
 	};
 	data?: PartnerTrackData;
 }
 
-export interface PartnerRecommendationsResponse {
+export interface PartnerRecommendationsResponse extends PartnerErrors {
 	data?: {
 		internalLinkRecommenderTrack?: {
 			items?: PartnerRecommendationItem[];
 		};
-		// some partner endpoints return recommendations under `seoRecommendedTrack`
-		// (observed in partner responses). Support that shape as a fallback.
+		// Returned instead of `internalLinkRecommenderTrack` by some persisted queries
 		seoRecommendedTrack?: {
 			items?: PartnerRecommendationItem[];
 		};

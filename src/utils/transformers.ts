@@ -96,7 +96,7 @@ function mapTrack(trackData: PartnerTrackData) {
 
 function mapPlaylistItem(item: PartnerPlaylistItem): SpotifyPlaylistTrackItem | null {
 	const trackData = item.itemV2?.data;
-	if (!trackData || trackData.__typename !== "Track") return null;
+	if (trackData?.__typename !== "Track") return null;
 
 	const { artists, album, track } = mapTrack(trackData);
 
@@ -151,10 +151,8 @@ export function transformPlaylistResponse(data: PartnerPlaylistResponse): Spotif
 }
 
 function mapRecommendation(item: PartnerRecommendationItem): SpotifyTrack | null {
-	// Support both { content: { data } } and { data } item shapes returned
-	// by different partner persisted queries.
 	const trackData = item.content?.data ?? item.data;
-	if (!trackData || trackData.__typename !== "Track") return null;
+	if (trackData?.__typename !== "Track") return null;
 
 	const { artists, album, track } = mapTrack(trackData);
 
@@ -169,9 +167,6 @@ function mapRecommendation(item: PartnerRecommendationItem): SpotifyTrack | null
 }
 
 export function transformRecommendationsResponse(data: PartnerRecommendationsResponse, seedTrackId: string): RecommendationsResponse {
-	// The API may return recommendations under different fields depending on
-	// the persisted query. Prefer `internalLinkRecommenderTrack`, but fall back
-	// to `seoRecommendedTrack` when available (observed in partner responses)
 	const recommendations = data?.data?.internalLinkRecommenderTrack?.items ?? data?.data?.seoRecommendedTrack?.items;
 	if (!recommendations) return { seeds: [], tracks: [] };
 

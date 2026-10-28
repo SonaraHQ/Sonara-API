@@ -1,4 +1,5 @@
 import type { SpotifyToken } from "@/types/token.js";
+import { HTTPException } from "hono/http-exception";
 import { logs } from "@/utils/logger.js";
 
 // Treat a token as expired slightly early to absorb clock skew and request latency
@@ -44,13 +45,15 @@ export class TokenSlot<T extends SpotifyToken> {
 		);
 	}
 
-	// Concurrent callers share the same in-flight fetch
+	// Concurrent callers share the same in-flight fetch. A failure surfaces as a 503 to API clients
 	private refresh(): Promise<T> {
 		this.pending ??= this.fetcher()
 			.then((token) => {
-				this.token = token;
-				this.schedule(this.refreshAt(token) - Date.now());
+				this.offer(token);
 				return token;
+			})
+			.catch((error) => {
+				throw new HTTPException(503, { message: `Spotify ${this.name} token unavailable -> ${error}` });
 			})
 			.finally(() => {
 				this.pending = undefined;
@@ -63,13 +66,21 @@ export class TokenSlot<T extends SpotifyToken> {
 		return this.refresh();
 	}
 
-	// Valid cached token, never triggers a fetch
+	// Never triggers a fetch
 	public isReady(): boolean {
 		return this.valid();
 	}
 
-	public invalidate(): void {
-		this.token = undefined;
+	// Also used for a token fetched elsewhere, e.g. by a sibling slot sharing the same page load
+	public offer(token: T): void {
+		this.token = token;
+		this.schedule(this.refreshAt(token) - Date.now());
+	}
+
+	// Only drops the token that was rejected: a request still holding an old token
+	// must not discard the fresh one another request just fetched
+	public invalidate(accessToken: string): void {
+		if (this.token?.accessToken === accessToken) this.token = undefined;
 	}
 
 	public stop(): void {

@@ -18,6 +18,8 @@ module.exports = {
 			min_uptime: "10s",
 			max_restarts: 10,
 			restart_delay: 2000,
+			// The app waits up to 8s for in-flight requests on shutdown, PM2's 1.6s default would cut them off
+			kill_timeout: 10_000,
 
 			// The app reads .env itself via `process.loadEnvFile()`.
 			env: {
