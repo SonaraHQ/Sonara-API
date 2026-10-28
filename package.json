@@ -10,8 +10,10 @@
         "dev": "tsx watch src/index.ts",
         "start": "tsx src/index.ts",
         "build": "tsc && tsc-alias",
-        "typecheck": "tsc --noEmit",
-        "format": "biome check --write ./src",
+        "typecheck": "tsc --noEmit && tsc -p test",
+        "test": "vitest run",
+        "lint": "biome check",
+        "format": "biome check --write",
         "start:prod": "node dist/index.js",
         "install:browser": "playwright install chromium"
     },
@@ -26,7 +28,8 @@
         "@types/node": "^26.6.5",
         "tsc-alias": "^1.9.9",
         "tsx": "^4.23.15",
-        "typescript": "^7.0.2"
+        "typescript": "^7.0.2",
+        "vitest": "^5.0.5"
     },
-    "description": "Spotify resolver (playlists, recommendations) with built-in anonymous token generation (Playwright)"
+    "description": "Spotify resolver API (playlists, recommendations, lyrics) with built-in anonymous token generation (Playwright)"
 }
