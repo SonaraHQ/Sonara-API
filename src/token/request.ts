@@ -60,6 +60,11 @@ export class TokenSlot<T extends SpotifyToken> {
 		return this.refresh();
 	};
 
+	// Valid cached token, never triggers a fetch
+	public isReady(): boolean {
+		return this.valid();
+	};
+
 	public invalidate(): void {
 		this.token = undefined;
 	};

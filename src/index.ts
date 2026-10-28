@@ -44,8 +44,15 @@ const app = new Hono()
 					access: "/spotifytoken",
 					client: "/clienttoken",
 				},
+				health: "/health",
 			},
 		});
+	})
+	// No outbound call: safe to poll as often as needed. 503 until the anonymous tokens are available
+	.get("/health", (c) => {
+		const tokens = tokenHandler.status();
+		const ok = tokens.access && tokens.client;
+		return c.json({ status: ok ? "ok" : "degraded", uptimeSeconds: Math.round(process.uptime()), tokens }, ok ? 200 : 503);
 	})
 	.get("/spotifytoken", tokenHandler.honoHandler)
 	.get("/clienttoken", tokenHandler.clientTokenHonoHandler)

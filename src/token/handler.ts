@@ -70,6 +70,11 @@ export class SpotifyTokenHandler {
 		return this.account !== undefined;
 	};
 
+	// Token availability for /health, read from memory only
+	public status(): { access: boolean; client: boolean; account?: boolean } {
+		return { access: this.access.isReady(), client: this.client.isReady(), ...(this.account && { account: this.account.isReady() }) };
+	};
+
 	public async getAccountToken(): Promise<SpotifyToken> {
 		if (!this.account) throw new Error("SPOTIFY_SP_DC is not set");
 		return this.account.get();

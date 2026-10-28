@@ -71,6 +71,7 @@ Keep a single instance: the token cache and the browser lock live in memory.
 | `GET /lyrics/:id` · `GET /lyrics?url=` | Spotify lyrics of a track (`lyrics` object from Spotify: `syncType`, `lines`, `providerDisplayName`). Requires `SPOTIFY_SP_DC`; 404 when the track has no lyrics, 503 when lyrics are disabled |
 | `GET /spotifytoken` | Anonymous access token (LavaSrc `customTokenEndpoint`) |
 | `GET /clienttoken` | Spotify client token |
+| `GET /health` | `status`, uptime and which tokens are ready. 200 when the access and client tokens are available, 503 otherwise. No call to Spotify, safe to poll |
 
 `url` accepts an open.spotify.com URL (with or without locale prefix and query) or a `spotify:<type>:<id>` URI.
 
