@@ -9,6 +9,10 @@ updates:
           # A single PR for minor and patch updates, majors get their own
           dependencies:
               update-types: [minor, patch]
+      ignore:
+          # Must match the minimum Node.js version (engines), not the latest one
+          - dependency-name: "@types/node"
+            update-types: ["version-update:semver-major"]
 
     - package-ecosystem: github-actions
       directory: /

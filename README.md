@@ -12,7 +12,7 @@ Self-hosted Spotify resolver API: full playlists, recommendations and lyrics, wi
 
 ## Quick start
 
-Requires Node.js 22.18 or later.
+Requires Node.js 24 or later.
 
 ```bash
 pnpm install
