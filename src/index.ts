@@ -15,7 +15,7 @@ const app = new Hono()
 	.get("/", (c) => {
 		return c.json({
 			name: "Solify - Spotify Resolver API",
-			version: "1.0.0",
+			version: "1.1.0",
 			endpoints: {
 				playlist: {
 					byId: "/playlist/:id",
