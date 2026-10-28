@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.0
 
 ### Added
 
@@ -9,7 +9,12 @@
 
 ### Changed
 
-- The Docker image is based on `node:22-bookworm-slim` with the Chromium headless shell only, instead of the full Playwright image.
+- **Node.js 24 or later is now required** (was 22.18), to run on the current LTS line and its security fixes.
+- The Docker image is based on `node:24-bookworm-slim` with the Chromium headless shell only (1.2GB, was 3.8GB with the full Playwright image).
+
+### Upgrade notes
+
+- Without Docker: update Node.js to 24 before `pnpm install`.
 
 ## 1.2.0
 
