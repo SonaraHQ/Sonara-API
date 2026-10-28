@@ -25,10 +25,13 @@ The API listens on `http://localhost:1500`. With PM2: `pm2 start ecosystem.confi
 
 ### Docker
 
+Images for `amd64` and `arm64` are published on GitHub Container Registry:
+
 ```bash
-docker build -t sonara-api .
-docker run -d -p 1500:1500 --env-file .env -v sonara-cache:/app/cache sonara-api
+docker run -d -p 1500:1500 --env-file .env -v sonara-cache:/app/cache ghcr.io/sonarahq/sonara-api:latest
 ```
+
+To build it yourself: `docker build -t sonara-api .`
 
 ## Configuration
 
