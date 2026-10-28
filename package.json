@@ -1,5 +1,5 @@
 {
-    "name": "spotify-api",
+    "name": "sonara-api",
     "type": "module",
     "packageManager": "pnpm@11.21.0",
     "engines": {

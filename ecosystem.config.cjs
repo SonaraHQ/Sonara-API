@@ -1,7 +1,7 @@
 module.exports = {
 	apps: [
 		{
-			name: "Spotify-API",
+			name: "Sonara-API",
 			// Point PM2 straight at the built entrypoint (run `pnpm build` first).
 			// Going through a package manager makes PM2 track the wrapper's PID.
 			script: "dist/index.js",

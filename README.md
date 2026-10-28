@@ -1,4 +1,4 @@
-# Spotify API
+# Sonara-API
 
 Merge of two projects into a single server:
 
