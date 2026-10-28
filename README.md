@@ -35,6 +35,16 @@ CACHE_MEMORY_TTL_HOURS=12    # in-memory lifetime
 CACHE_DISK_TTL_HOURS=24      # on-disk lifetime, 0 = never expires (old behavior)
 ```
 
+Optional Spotify lyrics:
+
+```env
+SPOTIFY_SP_DC=...            # sp_dc cookie of a Spotify account, enables GET /lyrics
+```
+
+Spotify only serves lyrics to logged-in users, so `/lyrics` needs the `sp_dc` cookie of an account
+(open.spotify.com while logged in, browser dev tools, Application, Cookies). Use a separate account, not your personal one.
+The cookie stays valid for about a year, or until that account logs out everywhere.
+
 `TOKEN_ENDPOINT` is no longer used.
 
 ## Usage
@@ -58,6 +68,7 @@ Keep a single instance: the token cache and the browser lock live in memory.
 | `GET /playlist/full/:id` · `GET /playlist/full?url=` | Full details, requires `client_id`/`client_secret` |
 | `GET /recommendations/:id?limit=5` · `GET /recommendations?url=` | Recommendations (`limit` 1-100, default 5) |
 | `GET /recommendations/full/:id` · `GET /recommendations/full?url=` | Full details, requires `client_id`/`client_secret` |
+| `GET /lyrics/:id` · `GET /lyrics?url=` | Spotify lyrics of a track (`lyrics` object from Spotify: `syncType`, `lines`, `providerDisplayName`). Requires `SPOTIFY_SP_DC`; 404 when the track has no lyrics, 503 when lyrics are disabled |
 | `GET /spotifytoken` | Anonymous access token (LavaSrc `customTokenEndpoint`) |
 | `GET /clienttoken` | Spotify client token |
 

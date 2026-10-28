@@ -1,5 +1,5 @@
 import type { SpotifyToken, SpotifyClientToken, ClientTokenResponse } from "@/types/token.js";
-import type { Browser, LaunchOptions, Page, Response } from "playwright";
+import type { Browser, BrowserContext, LaunchOptions, Page, Response } from "playwright";
 import { Semaphore } from "@/utils/semaphore.js";
 import { logs } from "@/utils/logger.js";
 import { config } from "@/config/env.js";
@@ -7,6 +7,8 @@ import { chromium } from "playwright";
 
 const USER_AGENT = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36";
 const CAPTURE_TIMEOUT_MS = 15_000;
+
+type Cookies = Parameters<BrowserContext["addCookies"]>[0];
 
 const BLOCKED_TYPES = new Set(["image", "stylesheet", "font", "media", "websocket", "other"]);
 const BLOCKED_PATTERNS = ["google-analytics", "doubleclick.net", "googletagmanager.com", "https://open.spotifycdn.com/cdn/images/", "https://encore.scdn.co/fonts/"];
@@ -44,13 +46,14 @@ export class SpotifyBrowser {
 
 	// Launches a short-lived Chromium (no idle memory between refreshes), loads
 	// open.spotify.com and returns the JSON of the first response matching `match`
-	private async capture<T>(label: string, match: (response: Response) => boolean): Promise<T> {
+	private async capture<T>(label: string, match: (response: Response) => boolean, cookies: Cookies = []): Promise<T> {
 		const release = await this.lock.acquire();
 		let browser: Browser | undefined;
 
 		try {
 			browser = await chromium.launch(config.browserPath ? { ...LAUNCH_OPTIONS, executablePath: config.browserPath } : LAUNCH_OPTIONS);
 			const context = await browser.newContext({ userAgent: USER_AGENT, viewport: { width: 1, height: 1 } });
+			if (cookies.length) await context.addCookies(cookies);
 			const page = await context.newPage();
 			await this.setupPage(page);
 
@@ -67,6 +70,16 @@ export class SpotifyBrowser {
 			if (browser) await browser.close().catch(() => {});
 			release();
 		};
+	};
+
+	// Logs the web player in with the account's sp_dc cookie, so the token can read lyrics
+	public async fetchAccountToken(spDc: string): Promise<SpotifyToken> {
+		const json = await this.capture<SpotifyToken>("account token", (r) => r.url().includes("/api/token"), [
+			{ name: "sp_dc", value: spDc, domain: ".spotify.com", path: "/", httpOnly: true, secure: true, sameSite: "Lax" },
+		]);
+		delete json._notes;
+		if (json.isAnonymous !== false) throw new Error("Spotify returned an anonymous token: SPOTIFY_SP_DC is missing, invalid or expired");
+		return json;
 	};
 
 	public async fetchToken(): Promise<SpotifyToken> {

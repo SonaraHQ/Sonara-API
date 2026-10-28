@@ -23,4 +23,6 @@ export const config = {
 	memoryTtlMs: numberEnv("CACHE_MEMORY_TTL_HOURS", 12) * HOUR,
 	// On-disk cache lifetime, 0 = never expires
 	diskTtlMs: numberEnv("CACHE_DISK_TTL_HOURS", 24) * HOUR,
+	// sp_dc cookie of a Spotify account, needed for /lyrics (Spotify only serves lyrics to logged-in users)
+	spotifySpDc: process.env.SPOTIFY_SP_DC?.trim() || undefined,
 };

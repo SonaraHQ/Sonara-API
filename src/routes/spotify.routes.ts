@@ -1,4 +1,5 @@
 import { fetchRecommendationsFull, fetchRecommendations, fetchPlaylistFull, fetchPlaylist } from "@/services/spotify.service.js";
+import { fetchLyrics, lyricsEnabled } from "@/services/lyrics.service.js";
 import { extractPlaylistId, extractTrackId } from "@/utils/extractors.js";
 import { Hono, type Context } from "hono";
 
@@ -65,6 +66,16 @@ router.get("/recommendations/:id?", async (c) => {
 	if (id instanceof Response) return id;
 
 	return c.json(await fetchRecommendations(id, resolveLimit(c)));
+});
+
+router.get("/lyrics/:id?", async (c) => {
+	const id = resolveId(c, "track");
+	if (id instanceof Response) return id;
+
+	if (!lyricsEnabled()) return c.json({ error: "Lyrics are disabled: set SPOTIFY_SP_DC" }, 503);
+
+	const result = await fetchLyrics(id);
+	return result.found ? c.json({ lyrics: result.lyrics }) : c.json({ error: "No lyrics found", id }, 404);
 });
 
 export default router;
