@@ -10,13 +10,13 @@ export interface LyricsResult {
 	found: boolean;
 	// Spotify's `lyrics` object: syncType, lines[{ startTimeMs, words, endTimeMs }], provider, providerDisplayName, language
 	lyrics?: unknown;
-};
+}
 
 const lyricsCache = new Cache<LyricsResult>({ disk: "lyrics" });
 
 export function lyricsEnabled(): boolean {
 	return tokenHandler.hasAccount();
-};
+}
 
 // color-lyrics needs a logged-in token plus a client token, like the web player sends
 async function requestLyrics(trackId: string, retry = true): Promise<LyricsResult> {
@@ -36,16 +36,16 @@ async function requestLyrics(trackId: string, retry = true): Promise<LyricsResul
 	if (response.status === 401 && retry) {
 		tokenHandler.invalidateAccount();
 		return requestLyrics(trackId, false);
-	};
+	}
 	if (!response.ok) throw new Error(`Spotify lyrics error -> ${response.status} ${response.statusText}`);
 
 	const data = (await response.json()) as { lyrics?: unknown };
 	return data?.lyrics ? { found: true, lyrics: data.lyrics } : { found: false };
-};
+}
 
 export async function fetchLyrics(trackId: string): Promise<LyricsResult> {
 	return lyricsCache.getOrLoad(trackId, async () => {
 		const result = await requestLyrics(trackId);
 		return result.found ? { value: result } : { value: result, ttl: NOT_FOUND_TTL_MS, persist: false };
 	});
-};
+}

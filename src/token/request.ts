@@ -22,24 +22,27 @@ export class TokenSlot<T extends SpotifyToken> {
 		this.name = name;
 		this.fetcher = fetcher;
 		this.refreshAt = refreshAt;
-	};
+	}
 
 	private valid(): boolean {
 		return (this.token?.accessTokenExpirationTimestampMs ?? 0) - VALIDITY_MARGIN_MS > Date.now();
-	};
+	}
 
 	private schedule(delay: number): void {
 		clearTimeout(this.timer);
-		this.timer = setTimeout(async () => {
-			try {
-				const token = await this.refresh();
-				logs("info", `Spotify ${this.name} token auto-refreshed (expires in ${Math.round((token.accessTokenExpirationTimestampMs - Date.now()) / 1000)}s)`);
-			} catch (err) {
-				logs("warn", `Failed to auto-refresh Spotify ${this.name} token`, err);
-				this.schedule(RETRY_DELAY_MS);
-			};
-		}, Math.max(delay, MIN_REFRESH_DELAY_MS));
-	};
+		this.timer = setTimeout(
+			async () => {
+				try {
+					const token = await this.refresh();
+					logs("info", `Spotify ${this.name} token auto-refreshed (expires in ${Math.round((token.accessTokenExpirationTimestampMs - Date.now()) / 1000)}s)`);
+				} catch (err) {
+					logs("warn", `Failed to auto-refresh Spotify ${this.name} token`, err);
+					this.schedule(RETRY_DELAY_MS);
+				}
+			},
+			Math.max(delay, MIN_REFRESH_DELAY_MS),
+		);
+	}
 
 	// Concurrent callers share the same in-flight fetch
 	private refresh(): Promise<T> {
@@ -53,24 +56,24 @@ export class TokenSlot<T extends SpotifyToken> {
 				this.pending = undefined;
 			});
 		return this.pending;
-	};
+	}
 
 	public async get(): Promise<T> {
 		if (this.token && this.valid()) return this.token;
 		return this.refresh();
-	};
+	}
 
 	// Valid cached token, never triggers a fetch
 	public isReady(): boolean {
 		return this.valid();
-	};
+	}
 
 	public invalidate(): void {
 		this.token = undefined;
-	};
+	}
 
 	public stop(): void {
 		clearTimeout(this.timer);
 		this.timer = undefined;
-	};
-};
+	}
+}

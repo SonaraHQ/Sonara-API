@@ -3,8 +3,8 @@ function safeDecode(input: string): string {
 		return decodeURIComponent(input);
 	} catch {
 		return input;
-	};
-};
+	}
+}
 
 // Accepts a raw id, a `spotify:<kind>:<id>` URI or an open.spotify.com URL (with locale prefix, query, etc.)
 function extractId(input: string, kind: "playlist" | "track"): string {
@@ -18,12 +18,12 @@ function extractId(input: string, kind: "playlist" | "track"): string {
 
 	const idMatch = clean.match(/^([A-Za-z0-9_-]{8,})$/);
 	return idMatch ? idMatch[1]! : clean;
-};
+}
 
 export function extractPlaylistId(input: string): string {
 	return extractId(input, "playlist");
-};
+}
 
 export function extractTrackId(input: string): string {
 	return extractId(input, "track");
-};
+}

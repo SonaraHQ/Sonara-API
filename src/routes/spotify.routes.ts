@@ -17,7 +17,7 @@ function resolveId(c: Context, kind: Kind): string | Response {
 	if (!ID_PATTERN.test(id)) return c.json({ error: `Unable to parse ${kind} id`, id, raw }, 400);
 
 	return id;
-};
+}
 
 function resolveCredentials(c: Context): { clientId: string; clientSecret: string } | Response {
 	const clientId = c.req.query("client_id") || c.req.header("x-client-id") || c.req.header("x-spotify-client-id");
@@ -25,12 +25,12 @@ function resolveCredentials(c: Context): { clientId: string; clientSecret: strin
 
 	if (!clientId || !clientSecret) return c.json({ error: "client_id and client_secret are required in the request" }, 400);
 	return { clientId, clientSecret };
-};
+}
 
 function resolveLimit(c: Context): number {
 	const limit = Number.parseInt(c.req.query("limit") ?? "", 10);
 	return Number.isFinite(limit) ? Math.min(Math.max(limit, 1), MAX_RECOMMENDATIONS) : 5;
-};
+}
 
 const router = new Hono();
 

@@ -42,7 +42,7 @@ export class SpotifyBrowser {
 			if (BLOCKED_TYPES.has(request.resourceType()) || BLOCKED_PATTERNS.some((pattern) => url.includes(pattern))) return route.abort();
 			return route.continue();
 		});
-	};
+	}
 
 	// Launches a short-lived Chromium (no idle memory between refreshes), loads
 	// open.spotify.com and returns the JSON of the first response matching `match`
@@ -69,8 +69,8 @@ export class SpotifyBrowser {
 		} finally {
 			if (browser) await browser.close().catch(() => {});
 			release();
-		};
-	};
+		}
+	}
 
 	// Logs the web player in with the account's sp_dc cookie, so the token can read lyrics
 	public async fetchAccountToken(spDc: string): Promise<SpotifyToken> {
@@ -80,13 +80,13 @@ export class SpotifyBrowser {
 		delete json._notes;
 		if (json.isAnonymous !== false) throw new Error("Spotify returned an anonymous token: SPOTIFY_SP_DC is missing, invalid or expired");
 		return json;
-	};
+	}
 
 	public async fetchToken(): Promise<SpotifyToken> {
 		const json = await this.capture<SpotifyToken>("token", (r) => r.url().includes("/api/token"));
 		delete json._notes;
 		return json;
-	};
+	}
 
 	public async fetchClientToken(): Promise<SpotifyClientToken> {
 		const json = await this.capture<ClientTokenResponse>("client token", (r) => r.url().includes("clienttoken.spotify.com/v1/clienttoken"));
@@ -101,9 +101,9 @@ export class SpotifyBrowser {
 			accessTokenExpirationTimestampMs: now + Number(granted.expires_after_seconds) * 1000,
 			refreshAfterTimestampMs: granted.refresh_after_seconds ? now + Number(granted.refresh_after_seconds) * 1000 : undefined,
 		};
-	};
+	}
 
 	public async close(): Promise<void> {
 		// Nothing to close as we don't keep persistent state
-	};
-};
+	}
+}

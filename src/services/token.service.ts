@@ -10,8 +10,8 @@ export async function getAccessToken(): Promise<string> {
 		return token.accessToken;
 	} catch (error) {
 		throw new Error(`Error fetching Spotify token -> ${error}`);
-	};
-};
+	}
+}
 
 async function requestWebApiToken(auth: string): Promise<string> {
 	const response = await fetch("https://accounts.spotify.com/api/token", {
@@ -26,7 +26,7 @@ async function requestWebApiToken(auth: string): Promise<string> {
 	if (!response.ok) {
 		const text = await response.text();
 		throw new Error(`Failed to fetch Spotify Web API token -> ${response.status} ${response.statusText} - ${text}.`);
-	};
+	}
 
 	const data = (await response.json()) as { access_token: string; expires_in: number };
 
@@ -34,7 +34,7 @@ async function requestWebApiToken(auth: string): Promise<string> {
 	if (ttl > 0) WebApiTokenCache.set(auth, data.access_token, { ttl });
 
 	return data.access_token;
-};
+}
 
 export async function getWebApiToken(clientId?: string, clientSecret?: string): Promise<string> {
 	if (!clientId || !clientSecret) throw new Error("Missing client_id and client_secret in request; per-request credentials are required.");
@@ -49,15 +49,15 @@ export async function getWebApiToken(clientId?: string, clientSecret?: string): 
 	if (!pending) {
 		pending = requestWebApiToken(auth).finally(() => pendingWebApiTokens.delete(auth));
 		pendingWebApiTokens.set(auth, pending);
-	};
+	}
 
 	try {
 		return await pending;
 	} catch (error) {
 		throw new Error(`Error fetching Spotify Web API token -> ${error}.`);
-	};
-};
+	}
+}
 
 export function invalidateAccessTokenCache() {
 	tokenHandler.invalidate();
-};
+}

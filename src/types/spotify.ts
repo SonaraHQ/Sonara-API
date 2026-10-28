@@ -2,7 +2,7 @@ export interface SpotifyRequestVariables {
 	enableWatchFeedEntrypoint?: boolean;
 	limit?: number;
 	uri: string;
-};
+}
 
 export interface SpotifyAPIRequest<TVariables extends SpotifyRequestVariables = SpotifyRequestVariables> {
 	variables: TVariables;
@@ -13,17 +13,17 @@ export interface SpotifyAPIRequest<TVariables extends SpotifyRequestVariables = 
 			sha256Hash: string;
 		};
 	};
-};
+}
 
 export interface SpotifyExternalUrl {
 	spotify: string;
-};
+}
 
 export interface SpotifyImage {
 	height?: number | null;
 	width?: number | null;
 	url: string;
-};
+}
 
 export interface SpotifyArtist {
 	external_urls: SpotifyExternalUrl;
@@ -32,7 +32,7 @@ export interface SpotifyArtist {
 	href: string;
 	uri: string;
 	id: string;
-};
+}
 
 export interface SpotifyAlbum {
 	album_type: string;
@@ -48,7 +48,7 @@ export interface SpotifyAlbum {
 	total_tracks: number | null;
 	type: "album";
 	uri: string;
-};
+}
 
 export interface SpotifyTrack {
 	album: SpotifyAlbum;
@@ -78,7 +78,7 @@ export interface SpotifyUser {
 	id?: string | null;
 	type?: string | null;
 	uri?: string | null;
-};
+}
 
 export interface SpotifyPlaylistTrackItem {
 	added_at?: string | null;
@@ -87,7 +87,7 @@ export interface SpotifyPlaylistTrackItem {
 	primary_color?: string | null;
 	track?: SpotifyTrack | null;
 	video_thumbnail?: { url?: string | null };
-};
+}
 
 export type SpotifyRecommendations = {
 	seeds: {
@@ -125,7 +125,7 @@ export interface SpotifyPlaylist {
 	};
 	type: "playlist";
 	uri: string;
-};
+}
 
 export interface RecommendationSeed {
 	afterFilteringSize: number;
@@ -134,26 +134,26 @@ export interface RecommendationSeed {
 	id: string;
 	initialPoolSize: number;
 	type: "track";
-};
+}
 
 export interface RecommendationsResponse {
 	seeds: RecommendationSeed[];
 	tracks: SpotifyTrack[];
-};
+}
 export interface PartnerImage {
 	url?: string;
 	width?: number;
 	height?: number;
-};
+}
 
 export interface PartnerProfile {
 	name?: string;
-};
+}
 
 export interface PartnerArtist {
 	uri?: string;
 	profile?: PartnerProfile;
-};
+}
 
 export interface PartnerAlbum {
 	uri?: string;
@@ -161,23 +161,23 @@ export interface PartnerAlbum {
 		sources?: PartnerImage[];
 	};
 	name?: string;
-};
+}
 
 export interface PartnerContentRating {
 	label?: string;
-};
+}
 
 export interface PartnerTrackDuration {
 	totalMilliseconds?: number;
-};
+}
 
 export interface PartnerPlayability {
 	playable?: boolean;
-};
+}
 
 export interface PartnerArtistCollection {
 	items?: PartnerArtist[];
-};
+}
 
 export interface PartnerTrackData {
 	__typename?: string;
@@ -190,7 +190,7 @@ export interface PartnerTrackData {
 	name?: string;
 	trackNumber?: number;
 	playability?: PartnerPlayability;
-};
+}
 
 export interface PartnerPlaylistItem {
 	itemV2?: {
@@ -205,7 +205,7 @@ export interface PartnerPlaylistItem {
 		href?: string;
 		profile?: { name?: string };
 	};
-};
+}
 
 export interface PartnerPlaylistResponse {
 	data?: {
@@ -226,7 +226,7 @@ export interface PartnerPlaylistResponse {
 			collaborative?: boolean;
 		};
 	};
-};
+}
 
 export interface PartnerRecommendationItem {
 	// some partner persisted queries return items wrapped as { content: { data: ... } }
@@ -235,7 +235,7 @@ export interface PartnerRecommendationItem {
 		data?: PartnerTrackData;
 	};
 	data?: PartnerTrackData;
-};
+}
 
 export interface PartnerRecommendationsResponse {
 	data?: {
@@ -248,7 +248,7 @@ export interface PartnerRecommendationsResponse {
 			items?: PartnerRecommendationItem[];
 		};
 	};
-};
+}
 
 export type PlaylistRequestVariables = {
 	uri: string;

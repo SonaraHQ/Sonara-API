@@ -8,12 +8,12 @@ interface CacheOptions {
 	// Sub-folder of the cache dir, omit to keep entries in memory only
 	disk?: string;
 	max?: number;
-};
+}
 
 interface SetOptions {
 	ttl?: number;
 	persist?: boolean;
-};
+}
 
 // Two-level cache (memory LRU + JSON files) with in-flight request de-duplication
 export class Cache<T extends {}> {
@@ -29,11 +29,11 @@ export class Cache<T extends {}> {
 			updateAgeOnGet: true,
 		});
 		this.dir = options.disk ? path.join(config.cacheDir, options.disk) : undefined;
-	};
+	}
 
 	private file(key: string): string | undefined {
 		return this.dir ? path.join(this.dir, `${encodeURIComponent(key)}.json`) : undefined;
-	};
+	}
 
 	private async readDisk(key: string): Promise<T | undefined> {
 		const file = this.file(key);
@@ -43,12 +43,12 @@ export class Cache<T extends {}> {
 			if (config.diskTtlMs > 0) {
 				const { mtimeMs } = await fs.stat(file);
 				if (Date.now() - mtimeMs > config.diskTtlMs) return undefined;
-			};
+			}
 			return JSON.parse(await fs.readFile(file, "utf-8")) as T;
 		} catch {
 			return undefined;
-		};
-	};
+		}
+	}
 
 	private async writeDisk(key: string, value: T): Promise<void> {
 		const file = this.file(key);
@@ -59,8 +59,8 @@ export class Cache<T extends {}> {
 			await fs.writeFile(file, JSON.stringify(value), "utf-8");
 		} catch (err) {
 			logs("warn", `Failed to write cache file -> ${file}`, err);
-		};
-	};
+		}
+	}
 
 	public async get(key: string): Promise<T | undefined> {
 		const cached = this.memory.get(key);
@@ -69,12 +69,12 @@ export class Cache<T extends {}> {
 		const fromDisk = await this.readDisk(key);
 		if (fromDisk) this.memory.set(key, fromDisk);
 		return fromDisk;
-	};
+	}
 
 	public set(key: string, value: T, options: SetOptions = {}): void {
 		this.memory.set(key, value, options.ttl ? { ttl: options.ttl } : undefined);
 		if (options.persist !== false) void this.writeDisk(key, value);
-	};
+	}
 
 	// Returns the cached value or runs `load` once, even under concurrent calls for the same key
 	public async getOrLoad(key: string, load: () => Promise<{ value: T } & SetOptions>): Promise<T> {
@@ -93,8 +93,8 @@ export class Cache<T extends {}> {
 
 		this.inflight.set(key, promise);
 		return promise;
-	};
-};
+	}
+}
 
 // Removes expired cache files so the folder does not grow forever
 export async function pruneDiskCache(): Promise<void> {
@@ -114,10 +114,10 @@ export async function pruneDiskCache(): Promise<void> {
 					if (now - mtimeMs > config.diskTtlMs) {
 						await fs.unlink(file);
 						removed++;
-					};
-				} catch {};
+					}
+				} catch {}
 			}),
 	);
 
 	if (removed) logs("info", `Pruned ${removed} expired cache file(s)`);
-};
+}

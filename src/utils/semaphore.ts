@@ -7,10 +7,10 @@ export class Semaphore {
 			return new Promise((resolve) => {
 				this._waiters.push(resolve);
 			});
-		};
+		}
 		this._locked = true;
 		return this._release.bind(this);
-	};
+	}
 
 	private _release() {
 		const waiter = this._waiters.shift();
@@ -18,6 +18,6 @@ export class Semaphore {
 			waiter(this._release.bind(this));
 		} else {
 			this._locked = false;
-		};
-	};
-};
+		}
+	}
+}

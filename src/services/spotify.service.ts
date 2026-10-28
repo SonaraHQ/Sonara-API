@@ -1,4 +1,12 @@
-import type { RecommendationRequestVariables, SpotifyRecommendations, PartnerPlaylistResponse, PlaylistRequestVariables, SpotifyAPIRequest, SpotifyPlaylist, SpotifyTrack } from "@/types/spotify.js";
+import type {
+	RecommendationRequestVariables,
+	SpotifyRecommendations,
+	PartnerPlaylistResponse,
+	PlaylistRequestVariables,
+	SpotifyAPIRequest,
+	SpotifyPlaylist,
+	SpotifyTrack,
+} from "@/types/spotify.js";
 import { transformRecommendationsResponse, transformPlaylistResponse } from "@/utils/transformers.js";
 import { invalidateAccessTokenCache, getAccessToken, getWebApiToken } from "@/services/token.service.js";
 import { Cache } from "@/services/cache.service.js";
@@ -24,11 +32,11 @@ const recommendationsFullCache = new Cache<SpotifyRecommendations>({ disk: "reco
 function isDynamicPlaylist(playlist: SpotifyPlaylist): boolean {
 	const name = playlist.name?.toLowerCase() ?? "";
 	return name.includes("mix") || name.includes("radio");
-};
+}
 
 function cacheOptions(playlist: SpotifyPlaylist) {
 	return isDynamicPlaylist(playlist) ? { ttl: DYNAMIC_TTL_MS, persist: false } : {};
-};
+}
 
 // Partner API call, retried once with a fresh token on 401
 async function partnerQuery<TResponse, TVariables extends SpotifyAPIRequest["variables"]>(operationName: string, sha256Hash: string, variables: TVariables): Promise<TResponse> {
@@ -52,11 +60,11 @@ async function partnerQuery<TResponse, TVariables extends SpotifyAPIRequest["var
 	if (response.status === 401) {
 		invalidateAccessTokenCache();
 		response = await send();
-	};
+	}
 
 	if (!response.ok) throw new Error(`Spotify API error -> ${response.status} ${response.statusText}`);
 	return (await response.json()) as TResponse;
-};
+}
 
 // Full Web API track objects, fetched in parallel batches
 async function fetchTracksFull(ids: string[], clientId?: string, clientSecret?: string): Promise<SpotifyTrack[]> {
@@ -74,7 +82,7 @@ async function fetchTracksFull(ids: string[], clientId?: string, clientSecret?: 
 			if (!response.ok) {
 				const text = await response.text();
 				throw new Error(`Spotify Web API error -> ${response.status} ${response.statusText} - ${text}`);
-			};
+			}
 
 			const data = (await response.json()) as { tracks?: (SpotifyTrack | null)[] };
 			return (data.tracks ?? []).filter((track): track is SpotifyTrack => Boolean(track));
@@ -82,7 +90,7 @@ async function fetchTracksFull(ids: string[], clientId?: string, clientSecret?: 
 	);
 
 	return results.flat();
-};
+}
 
 async function loadPlaylist(playlistId: string): Promise<SpotifyPlaylist> {
 	const page = (offset: number) =>
@@ -107,14 +115,14 @@ async function loadPlaylist(playlistId: string): Promise<SpotifyPlaylist> {
 	if (content?.items) for (const next of rest) content.items.push(...(next.data?.playlistV2?.content?.items ?? []));
 
 	return transformPlaylistResponse(first);
-};
+}
 
 export async function fetchPlaylist(playlistId: string): Promise<SpotifyPlaylist> {
 	return playlistCache.getOrLoad(playlistId, async () => {
 		const playlist = await loadPlaylist(playlistId);
 		return { value: playlist, ...cacheOptions(playlist) };
 	});
-};
+}
 
 export async function fetchPlaylistFull(playlistId: string, clientId?: string, clientSecret?: string): Promise<SpotifyPlaylist> {
 	return playlistFullCache.getOrLoad(playlistId, async () => {
@@ -134,7 +142,7 @@ export async function fetchPlaylistFull(playlistId: string, clientId?: string, c
 		const full: SpotifyPlaylist = { ...playlist, tracks: { ...playlist.tracks, items: mergedItems, total: mergedItems.length } };
 		return { value: full, ...cacheOptions(full) };
 	});
-};
+}
 
 export async function fetchRecommendations(trackId: string, limit = 5): Promise<SpotifyRecommendations> {
 	return recommendationsCache.getOrLoad(`${trackId}_${limit}`, async () => {
@@ -147,7 +155,7 @@ export async function fetchRecommendations(trackId: string, limit = 5): Promise<
 		// Empty answers are usually transient: keep them out of the disk cache
 		return { value: recommendations, persist: recommendations.tracks.length > 0 };
 	});
-};
+}
 
 export async function fetchRecommendationsFull(trackId: string, limit = 5, clientId?: string, clientSecret?: string): Promise<SpotifyRecommendations> {
 	return recommendationsFullCache.getOrLoad(`${trackId}_${limit}`, async () => {
@@ -158,4 +166,4 @@ export async function fetchRecommendationsFull(trackId: string, limit = 5, clien
 
 		return { value: { seeds: rec.seeds, tracks: await fetchTracksFull(ids, clientId, clientSecret) } };
 	});
-};
+}

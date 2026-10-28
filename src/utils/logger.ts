@@ -18,11 +18,8 @@ export function logs(level: "log" | "error" | "warn" | "info", ...args: unknown[
 		coloredLevel = `${BLUE}${BOLD}[INFO]${RESET}`;
 	} else {
 		coloredLevel = `${GREEN}${BOLD}[LOG]${RESET}`;
-	};
-	
+	}
+
 	// Print with colorized level and timestamp
-	(console[level] as (...args: unknown[]) => void)(
-		`${coloredLevel} ${GRAY}${timestamp}${RESET}`,
-		...args,
-	);
-};
+	(console[level] as (...args: unknown[]) => void)(`${coloredLevel} ${GRAY}${timestamp}${RESET}`, ...args);
+}

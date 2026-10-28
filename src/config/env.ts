@@ -5,7 +5,7 @@ try {
 	process.loadEnvFile();
 } catch (err) {
 	if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-};
+}
 
 const HOUR = 3_600_000;
 
@@ -13,7 +13,7 @@ function numberEnv(name: string, fallback: number): number {
 	const raw = process.env[name]?.trim();
 	const value = raw ? Number(raw) : Number.NaN;
 	return Number.isFinite(value) && value >= 0 ? value : fallback;
-};
+}
 
 export const config = {
 	port: numberEnv("PORT", 1500),

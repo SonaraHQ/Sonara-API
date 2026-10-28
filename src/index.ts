@@ -24,8 +24,7 @@ const app = new Hono()
 				playlistFull: {
 					byId: "/playlist/full/:id",
 					byUrl: "/playlist/full?url=<spotify-playlist-url>",
-					notes:
-						"Required: every request must include client_id and client_secret as query params or x-spotify-client-id/x-spotify-client-secret (or x-client-id/x-client-secret) headers",
+					notes: "Required: every request must include client_id and client_secret as query params or x-spotify-client-id/x-spotify-client-secret (or x-client-id/x-client-secret) headers",
 				},
 				recommendations: {
 					byId: "/recommendations/:id?limit=5",
@@ -76,7 +75,7 @@ async function cleanup() {
 	logs("info", "Shutting down server...");
 	await tokenHandler.cleanup();
 	process.exit(0);
-};
+}
 
 process.on("SIGINT", cleanup);
 process.on("SIGTERM", cleanup);

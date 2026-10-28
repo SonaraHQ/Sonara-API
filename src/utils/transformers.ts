@@ -1,11 +1,26 @@
-import type { PartnerRecommendationsResponse, PartnerRecommendationItem, RecommendationsResponse, PartnerArtist, PartnerImage, PartnerPlaylistItem, PartnerPlaylistResponse, PartnerTrackData, SpotifyArtist, SpotifyImage, SpotifyPlaylist, SpotifyPlaylistTrackItem, SpotifyTrack, SpotifyUser } from "@/types/spotify.js";
+import type {
+	PartnerRecommendationsResponse,
+	PartnerRecommendationItem,
+	RecommendationsResponse,
+	PartnerArtist,
+	PartnerImage,
+	PartnerPlaylistItem,
+	PartnerPlaylistResponse,
+	PartnerTrackData,
+	SpotifyArtist,
+	SpotifyImage,
+	SpotifyPlaylist,
+	SpotifyPlaylistTrackItem,
+	SpotifyTrack,
+	SpotifyUser,
+} from "@/types/spotify.js";
 
 type PartnerUser = { uri?: string; href?: string; profile?: { name?: string } };
 
 // "spotify:track:abc" -> "abc"
 function idFromUri(uri?: string): string | undefined {
 	return uri?.split(":")[2];
-};
+}
 
 function mapImages(images: unknown): SpotifyImage[] {
 	return (Array.isArray(images) ? images : []).map((img: PartnerImage) => ({
@@ -13,7 +28,7 @@ function mapImages(images: unknown): SpotifyImage[] {
 		width: img.width ?? null,
 		height: img.height ?? null,
 	}));
-};
+}
 
 function mapArtist(artist: PartnerArtist): SpotifyArtist {
 	const id = idFromUri(artist.uri);
@@ -25,7 +40,7 @@ function mapArtist(artist: PartnerArtist): SpotifyArtist {
 		type: "artist",
 		uri: artist.uri ?? "",
 	};
-};
+}
 
 function mapUser(user: PartnerUser | undefined): SpotifyUser {
 	const id = idFromUri(user?.uri);
@@ -37,7 +52,7 @@ function mapUser(user: PartnerUser | undefined): SpotifyUser {
 		type: "user",
 		uri: user?.uri ?? null,
 	};
-};
+}
 
 // Track fields shared by playlists and recommendations
 function mapTrack(trackData: PartnerTrackData) {
@@ -77,7 +92,7 @@ function mapTrack(trackData: PartnerTrackData) {
 			uri: trackData.uri ?? "",
 		},
 	} as const;
-};
+}
 
 function mapPlaylistItem(item: PartnerPlaylistItem): SpotifyPlaylistTrackItem | null {
 	const trackData = item.itemV2?.data;
@@ -93,7 +108,7 @@ function mapPlaylistItem(item: PartnerPlaylistItem): SpotifyPlaylistTrackItem | 
 		track: { ...track, album: { ...album, release_date_precision: "day" }, artists } as SpotifyTrack,
 		video_thumbnail: { url: null },
 	};
-};
+}
 
 export function transformPlaylistResponse(data: PartnerPlaylistResponse): SpotifyPlaylist {
 	const playlistData = data?.data?.playlistV2;
@@ -104,7 +119,7 @@ export function transformPlaylistResponse(data: PartnerPlaylistResponse): Spotif
 	for (const item of contentItems) {
 		const mapped = mapPlaylistItem(item);
 		if (mapped) items.push(mapped);
-	};
+	}
 
 	const playlistId = idFromUri(playlistData?.uri) ?? "";
 
@@ -133,7 +148,7 @@ export function transformPlaylistResponse(data: PartnerPlaylistResponse): Spotif
 		type: "playlist",
 		uri: playlistData?.uri ?? `spotify:playlist:${playlistId}`,
 	};
-};
+}
 
 function mapRecommendation(item: PartnerRecommendationItem): SpotifyTrack | null {
 	// Support both { content: { data } } and { data } item shapes returned
@@ -151,7 +166,7 @@ function mapRecommendation(item: PartnerRecommendationItem): SpotifyTrack | null
 		external_ids: {},
 		is_playable: trackData.playability?.playable || false,
 	} as SpotifyTrack;
-};
+}
 
 export function transformRecommendationsResponse(data: PartnerRecommendationsResponse, seedTrackId: string): RecommendationsResponse {
 	// The API may return recommendations under different fields depending on
@@ -164,7 +179,7 @@ export function transformRecommendationsResponse(data: PartnerRecommendationsRes
 	for (const item of recommendations) {
 		const mapped = mapRecommendation(item);
 		if (mapped) tracks.push(mapped);
-	};
+	}
 
 	return {
 		seeds: [
@@ -179,4 +194,4 @@ export function transformRecommendationsResponse(data: PartnerRecommendationsRes
 		],
 		tracks,
 	};
-};
+}
