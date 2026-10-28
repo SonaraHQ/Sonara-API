@@ -1,6 +1,4 @@
-# Official Playwright image: Node.js plus Chromium and its system libraries.
-# Its version must match the `playwright` dependency, keep both in sync when upgrading.
-FROM mcr.microsoft.com/playwright:v1.64.1-noble AS base
+FROM node:22-bookworm-slim AS base
 WORKDIR /app
 RUN npm install -g pnpm@11.21.0
 
@@ -11,14 +9,25 @@ COPY tsconfig.json ./
 COPY src ./src
 RUN pnpm build
 
-FROM base
-ENV NODE_ENV=production
+FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --prod
-COPY --from=build /app/dist ./dist
-RUN mkdir -p /app/cache && chown pwuser /app/cache
 
-USER pwuser
+FROM node:22-bookworm-slim
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+COPY package.json ./
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+
+# Only the headless shell of Chromium and its system libraries, at the version of the installed `playwright`
+RUN node node_modules/playwright/cli.js install --with-deps --only-shell chromium \
+	&& rm -rf /var/lib/apt/lists/* \
+	&& mkdir -p /app/cache && chown node:node /app/cache
+
+USER node
 EXPOSE 1500
 VOLUME ["/app/cache"]
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s \
