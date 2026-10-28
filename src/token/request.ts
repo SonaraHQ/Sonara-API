@@ -4,6 +4,9 @@ import { logs } from "@/utils/logger.js";
 // Treat a token as expired slightly early to absorb clock skew and request latency
 const VALIDITY_MARGIN_MS = 10_000;
 const RETRY_DELAY_MS = 30_000;
+// Floor between background refreshes: a token returned already close to expiry
+// (or server clock skew) would otherwise schedule a 0ms refresh and loop
+const MIN_REFRESH_DELAY_MS = 30_000;
 
 // One cached token with single-flight refresh and a background refresh timer
 export class TokenSlot<T extends SpotifyToken> {
@@ -29,13 +32,13 @@ export class TokenSlot<T extends SpotifyToken> {
 		clearTimeout(this.timer);
 		this.timer = setTimeout(async () => {
 			try {
-				await this.refresh();
-				logs("info", `Spotify ${this.name} token auto-refreshed`);
+				const token = await this.refresh();
+				logs("info", `Spotify ${this.name} token auto-refreshed (expires in ${Math.round((token.accessTokenExpirationTimestampMs - Date.now()) / 1000)}s)`);
 			} catch (err) {
 				logs("warn", `Failed to auto-refresh Spotify ${this.name} token`, err);
 				this.schedule(RETRY_DELAY_MS);
 			};
-		}, Math.max(delay, 0));
+		}, Math.max(delay, MIN_REFRESH_DELAY_MS));
 	};
 
 	// Concurrent callers share the same in-flight fetch
