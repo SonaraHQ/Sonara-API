@@ -61,7 +61,7 @@ Every setting is optional. See [`.env.example`](.env.example) for details.
 | `GET /playlist/full/:id` | Same, with full track details ¹ |
 | `GET /recommendations/:id?limit=5` | Recommendations for a track, `limit` from 1 to 100 |
 | `GET /recommendations/full/:id?limit=5` | Same, with full track details ¹ |
-| `GET /lyrics/:id` | Lyrics of a track (requires `SPOTIFY_SP_DC`) |
+| `GET /lyrics/:id` | Lyrics of a track ² |
 | `GET /spotifytoken` | Anonymous access token |
 | `GET /clienttoken` | Spotify client token |
 | `GET /health` | Service status, safe to poll |
@@ -70,6 +70,10 @@ Every route taking an `:id` also accepts `?url=` with an open.spotify.com link o
 
 ¹ Requires the credentials of an app from the [Spotify developer dashboard](https://developer.spotify.com/dashboard),
 sent as `X-Client-Id` / `X-Client-Secret` headers (or `client_id` / `client_secret` query params).
+
+² Requires `SPOTIFY_SP_DC`, the `sp_dc` cookie of a Spotify account (open.spotify.com while logged in, browser dev tools, Application, Cookies).
+Use a dedicated account rather than your personal one. Spotify serves lyrics to Free and Premium accounts, but may cap how many lyrics
+a Free account can view per month: prefer a Premium account if you rely on lyrics.
 
 Responses follow the Spotify Web API [playlist](https://developer.spotify.com/documentation/web-api/reference/get-playlist)
 and [track](https://developer.spotify.com/documentation/web-api/reference/get-track) objects.
