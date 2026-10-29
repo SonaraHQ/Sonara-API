@@ -9,6 +9,8 @@ import type { Context } from "hono";
 
 // Refresh this long before expiry so callers never get a stale token
 const REFRESH_MARGIN_MS = 60_000;
+// Spotify hands back the same sp_dc token until it expires, so an early refresh only re-fetches it
+const ACCOUNT_REFRESH_DELAY_MS = 2_000;
 const INIT_ATTEMPTS = 3;
 const SP_DC = config.spotifySpDc;
 
@@ -44,7 +46,7 @@ export class SpotifyTokenHandler {
 		? new TokenSlot<SpotifyToken>(
 				"account",
 				() => this.browser.fetchAccountToken(SP_DC),
-				(token) => token.accessTokenExpirationTimestampMs - REFRESH_MARGIN_MS,
+				(token) => token.accessTokenExpirationTimestampMs + ACCOUNT_REFRESH_DELAY_MS,
 			)
 		: undefined;
 
