@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.3.1
+
+### Fixed
+
+- The account token (`SPOTIFY_SP_DC`) is refreshed once it expires instead of three times in a row: Spotify hands back the same token until then.
+- The Docker image runs under `tini`, which reaps the Chromium processes left behind by token fetches.
+
+### Changed
+
+- The Docker image installs Chromium before copying the code, so a release no longer reinstalls it when dependencies did not change.
+
 ## 1.3.0
 
 ### Added
