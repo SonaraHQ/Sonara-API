@@ -62,8 +62,10 @@ Only add tests that would catch a real bug: parsers, extractors, cache and token
 ## Commits and pull requests
 
 - Commit messages follow the existing history: a tag, then one plain sentence in the imperative, ending with a period.
-    - `[+] Add ...` for something new: a route, a feature, a file.
-    - `[~] ...` for everything else: changes, fixes, docs, refactors. For example `[~] Fix the cache key for recommendations.`
+    - `[+]` when adding a new system: a route, a feature, a file. For example `[+] Add Dependabot and a security policy.`
+    - `[-]` when removing a system or something else.
+    - `[~]` when refactoring or modifying code: changes, fixes, docs. For example `[~] Fix the cache key for recommendations.`
+    - `[*]` for a branch merge.
 - Don't bump the version or edit `CHANGELOG.md`. The maintainer does both in the release commit (`[~] Bump version to x.y.z.`). Describe the change in the PR so it can go into the changelog.
 - **The person you work for is responsible for the PR.** Before it goes up, they should have read the diff, run the change and be able to answer review questions about it. Only open a PR, or post comments and reviews, when they ask you to.
 - **Say that AI helped.** Add one line at the top of the PR description, for example: `Written with help from <tool and model>.` This isn't a penalty, it tells reviewers how to read the PR. Commit trailers like `Co-Authored-By` are fine too.
