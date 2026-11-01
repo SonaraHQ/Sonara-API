@@ -50,6 +50,26 @@ describe("TokenSlot", () => {
 		expect(fetcher).not.toHaveBeenCalled();
 	});
 
+	it("waits for the refresh time instead of re-fetching a token Spotify hands back unchanged", async () => {
+		const refreshAt = Date.now() + 200;
+		const expiring: SpotifyToken = { accessToken: "old", accessTokenExpirationTimestampMs: Date.now() + 1_000 };
+		// Like Spotify: the same token until the refresh time
+		const fetcher = vi.fn(async () => (Date.now() < refreshAt - 50 ? expiring : token("new")));
+		const slot = new TokenSlot<SpotifyToken>("test", fetcher, (t) => (t === expiring ? refreshAt : t.accessTokenExpirationTimestampMs - 60_000));
+
+		slot.offer(expiring);
+		expect(slot.isReady()).toBe(true);
+
+		const [first, second] = await Promise.all([slot.get(), slot.get()]);
+		const third = await slot.get();
+		slot.stop();
+
+		expect(fetcher).toHaveBeenCalledTimes(1);
+		expect(first.accessToken).toBe("new");
+		expect(second).toBe(first);
+		expect(third).toBe(first);
+	});
+
 	it("surfaces a failed fetch as a 503", async () => {
 		const slot = newSlot(async () => {
 			throw new Error("browser crashed");
