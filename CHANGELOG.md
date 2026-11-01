@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.2
+
+### Fixed
+
+- The anonymous tokens are refreshed once they expire instead of three times in a row, like the account token in 1.3.1: Spotify hands back the same token until then.
+- Requests in the last seconds of a token no longer relaunch Chromium one after another: the token is served until 2 seconds before it expires, then requests wait for its scheduled refresh. `/health` stays `ok` meanwhile.
+
 ## 1.3.1
 
 ### Fixed
