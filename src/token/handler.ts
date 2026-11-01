@@ -9,7 +9,7 @@ import type { Context } from "hono";
 
 // Refresh this long before expiry so callers never get a stale token
 const REFRESH_MARGIN_MS = 60_000;
-// Spotify hands back the same access token (anonymous or sp_dc) until it expires, so an early refresh only re-fetches it
+// Spotify returns the same access token until it expires
 const EXPIRY_REFRESH_DELAY_MS = 2_000;
 const INIT_ATTEMPTS = 3;
 const SP_DC = config.spotifySpDc;

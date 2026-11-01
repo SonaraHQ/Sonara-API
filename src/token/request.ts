@@ -3,7 +3,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { HTTPException } from "hono/http-exception";
 import { logs } from "@/utils/logger.js";
 
-// Treat a token as expired slightly early so the request using it does not outlive it
+// So the request using a token does not outlive it
 const VALIDITY_MARGIN_MS = 2_000;
 const RETRY_DELAY_MS = 30_000;
 // Floor between background refreshes: a token returned already close to expiry
@@ -66,18 +66,16 @@ export class TokenSlot<T extends SpotifyToken> {
 		const token = this.token;
 		if (token && this.valid()) return token;
 
-		// Spotify hands back the same token until it expires: fetching it before the refresh time
-		// would only relaunch Chromium, again for every request, so wait for that time instead
+		// Spotify returns the same token until it expires: wait for the refresh time instead of relaunching Chromium
 		const wait = token ? this.refreshAt(token) - Date.now() : 0;
 		if (wait > 0) {
 			await sleep(wait);
-			// Another caller waiting for the same time may already have refreshed it
 			if (this.token && this.token !== token && this.valid()) return this.token;
 		}
 		return this.refresh();
 	}
 
-	// Never triggers a fetch. A token waiting for its scheduled refresh still counts
+	// Never triggers a fetch
 	public isReady(): boolean {
 		return this.valid() || (this.token !== undefined && this.refreshAt(this.token) > Date.now());
 	}

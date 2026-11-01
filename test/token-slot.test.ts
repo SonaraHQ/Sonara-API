@@ -53,7 +53,6 @@ describe("TokenSlot", () => {
 	it("waits for the refresh time instead of re-fetching a token Spotify hands back unchanged", async () => {
 		const refreshAt = Date.now() + 200;
 		const expiring: SpotifyToken = { accessToken: "old", accessTokenExpirationTimestampMs: Date.now() + 1_000 };
-		// Like Spotify: the same token until the refresh time
 		const fetcher = vi.fn(async () => (Date.now() < refreshAt - 50 ? expiring : token("new")));
 		const slot = new TokenSlot<SpotifyToken>("test", fetcher, (t) => (t === expiring ? refreshAt : t.accessTokenExpirationTimestampMs - 60_000));
 
