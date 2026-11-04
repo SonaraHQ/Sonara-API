@@ -10,10 +10,10 @@ importers:
     dependencies:
       '@hono/node-server':
         specifier: ^2.1.5
-        version: 2.1.5(hono@4.13.14)
+        version: 2.1.5(hono@4.13.16)
       hono:
-        specifier: ^4.13.14
-        version: 4.13.14
+        specifier: ^4.13.16
+        version: 4.13.16
       lru-cache:
         specifier: ^11.5.3
         version: 11.5.3
@@ -28,8 +28,8 @@ importers:
         specifier: ^24.19.2
         version: 24.19.2
       tsc-alias:
-        specifier: ^1.9.9
-        version: 1.9.9
+        specifier: ^1.9.10
+        version: 1.9.10
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
@@ -634,8 +634,8 @@ packages:
     resolution: {integrity: sha512-jhIXaOzy1sb8IyocaruWSn1TjmnBVs8Ayhcy83rmxNJ8q2uWKCAj3CnJY+KpGSXCueAPc0i05kVvVKtP1t9S3g==}
     engines: {node: '>=10'}
 
-  hono@4.13.14:
-    resolution: {integrity: sha512-yhRLQ21U6qa9Hsu2N7Qcbh8tE+WKEcoErjIo56LeSGiGXGp9sA7UpE86Ui9uexb61KakiGwuHMn2QdV7w6i6kQ==}
+  hono@4.13.16:
+    resolution: {integrity: sha512-AOLOEhvrV+iH92xXCnFr/5+3KjPKcI3xP63XJtX5spAnkznPdHijlIsUTpi7/9EhWqrTCekw5c5zh1K+YsVw7A==}
     engines: {node: '>=16.9.0'}
 
   ignore@5.3.2:
@@ -850,8 +850,8 @@ packages:
     resolution: {integrity: sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==}
     engines: {node: '>=8.0'}
 
-  tsc-alias@1.9.9:
-    resolution: {integrity: sha512-TxUi+OyqQXRwSMUQaB0pqM89VbOEvL/6RkgQa2LrxNvbhCmkQvrp8NX7VyMW9KYVLGlwICxrLwNv3Ik4vtIQxw==}
+  tsc-alias@1.9.10:
+    resolution: {integrity: sha512-dsZvDB/wgAtRPFDHPYy7X7uqKFR4jJ7VB/2ndPGZQkIMQREz8q74fFsMZL4UmCbUztXhxoA1brKfqW7XzQeMqA==}
     engines: {node: '>=16.20.2'}
     hasBin: true
 
@@ -1080,9 +1080,9 @@ snapshots:
   '@esbuild/win32-x64@0.28.2':
     optional: true
 
-  '@hono/node-server@2.1.5(hono@4.13.14)':
+  '@hono/node-server@2.1.5(hono@4.13.16)':
     dependencies:
-      hono: 4.13.14
+      hono: 4.13.16
 
   '@jridgewell/resolve-uri@3.1.2': {}
 
@@ -1352,7 +1352,7 @@ snapshots:
       merge2: 1.4.1
       slash: 3.0.0
 
-  hono@4.13.14: {}
+  hono@4.13.16: {}
 
   ignore@5.3.2: {}
 
@@ -1518,7 +1518,7 @@ snapshots:
     dependencies:
       is-number: 7.0.0
 
-  tsc-alias@1.9.9:
+  tsc-alias@1.9.10:
     dependencies:
       chokidar: 3.6.0
       commander: 9.5.0
