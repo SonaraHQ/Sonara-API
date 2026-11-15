@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.3
+
+### Fixed
+
+- Playlists return their owner again: Spotify moved it to `ownerV2`, so `owner` came back empty. `added_by` is filled again for the same reason, and `owner.href` now links to the Web API user.
+- `added_at` is an ISO date string again instead of an `{ isoString }` object.
+
 ## 1.3.2
 
 ### Fixed
