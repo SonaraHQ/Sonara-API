@@ -24,14 +24,18 @@ describe("transformPlaylistResponse", () => {
 				name: "My playlist",
 				description: "A description",
 				images: [{ url: "https://i.scdn.co/playlist" }],
-				owner: { uri: "spotify:user:owner1", profile: { name: "Owner" } },
+				ownerV2: { data: { __typename: "User", name: "Owner", uri: "spotify:user:owner1", username: "owner1" } },
 				followers: { total: 42 },
 				content: {
 					totalCount: 3,
 					items: [
-						{ addedAt: "2026-01-01T00:00:00Z", itemV2: { data: track("track1") } },
+						{
+							addedAt: { isoString: "2026-01-01T00:00:00Z" },
+							addedBy: { data: { __typename: "User", name: "Adder", uri: "spotify:user:adder1", username: "adder1" } },
+							itemV2: { data: track("track1") },
+						},
 						{ itemV2: { data: { __typename: "Episode", uri: "spotify:episode:episode1" } } },
-						{ itemV2: { data: track("track2") } },
+						{ addedBy: null, itemV2: { data: track("track2") } },
 					],
 				},
 			},
@@ -49,7 +53,13 @@ describe("transformPlaylistResponse", () => {
 			uri: "spotify:playlist:playlist1",
 			external_urls: { spotify: "https://open.spotify.com/playlist/playlist1" },
 			followers: { total: 42 },
-			owner: { id: "owner1", display_name: "Owner" },
+			owner: {
+				id: "owner1",
+				display_name: "Owner",
+				uri: "spotify:user:owner1",
+				href: "https://api.spotify.com/v1/users/owner1",
+				external_urls: { spotify: "https://open.spotify.com/user/owner1" },
+			},
 			images: [{ url: "https://i.scdn.co/playlist", width: null, height: null }],
 		});
 	});
@@ -60,8 +70,10 @@ describe("transformPlaylistResponse", () => {
 	});
 
 	it("maps the track fields", () => {
-		const [first] = playlist.tracks.items;
+		const [first, second] = playlist.tracks.items;
 		expect(first?.added_at).toBe("2026-01-01T00:00:00Z");
+		expect(first?.added_by).toMatchObject({ id: "adder1", display_name: "Adder" });
+		expect(second?.added_by).toBeNull();
 		expect(first?.track).toMatchObject({
 			name: "Song track1",
 			duration_ms: 180_000,

@@ -7,6 +7,7 @@ import type {
 	PartnerPlaylistItem,
 	PartnerPlaylistResponse,
 	PartnerTrackData,
+	PartnerUser,
 	SpotifyArtist,
 	SpotifyImage,
 	SpotifyPlaylist,
@@ -14,8 +15,6 @@ import type {
 	SpotifyTrack,
 	SpotifyUser,
 } from "@/types/spotify.js";
-
-type PartnerUser = { uri?: string; href?: string; profile?: { name?: string } };
 
 // "spotify:track:abc" -> "abc"
 function idFromUri(uri?: string): string | undefined {
@@ -42,15 +41,16 @@ function mapArtist(artist: PartnerArtist): SpotifyArtist {
 	};
 }
 
-function mapUser(user: PartnerUser | undefined): SpotifyUser {
-	const id = idFromUri(user?.uri);
+function mapUser(user: PartnerUser | null | undefined): SpotifyUser {
+	const data = user?.data;
+	const id = data?.username ?? idFromUri(data?.uri);
 	return {
-		display_name: user?.profile?.name ?? null,
-		external_urls: { spotify: user?.uri ? `https://open.spotify.com/user/${id}` : "" },
-		href: user?.href ?? null,
+		display_name: data?.name ?? null,
+		external_urls: { spotify: id ? `https://open.spotify.com/user/${id}` : "" },
+		href: id ? `https://api.spotify.com/v1/users/${id}` : null,
 		id: id ?? null,
 		type: "user",
-		uri: user?.uri ?? null,
+		uri: data?.uri ?? null,
 	};
 }
 
@@ -101,8 +101,8 @@ function mapPlaylistItem(item: PartnerPlaylistItem): SpotifyPlaylistTrackItem | 
 	const { artists, album, track } = mapTrack(trackData);
 
 	return {
-		added_at: item.addedAt ?? item.added_at ?? null,
-		added_by: item.addedBy ? mapUser(item.addedBy) : null,
+		added_at: item.addedAt?.isoString ?? item.added_at ?? null,
+		added_by: item.addedBy?.data ? mapUser(item.addedBy) : null,
 		is_local: false,
 		primary_color: null,
 		track: { ...track, album: { ...album, release_date_precision: "day" }, artists } as SpotifyTrack,
@@ -132,7 +132,7 @@ export function transformPlaylistResponse(data: PartnerPlaylistResponse): Spotif
 		id: playlistId,
 		images: mapImages(playlistData?.images),
 		name: playlistData?.name ?? "",
-		owner: mapUser(playlistData?.owner),
+		owner: mapUser(playlistData?.ownerV2),
 		primary_color: null,
 		public: playlistData?.public ?? null,
 		snapshot_id: playlistData?.snapshotId ?? null,

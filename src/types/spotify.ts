@@ -185,12 +185,18 @@ export interface PartnerPlaylistItem {
 		data?: PartnerTrackData;
 	};
 
-	addedAt?: string;
+	addedAt?: { isoString?: string };
 	added_at?: string;
-	addedBy?: {
+	// null on editorial playlists
+	addedBy?: PartnerUser | null;
+}
+
+export interface PartnerUser {
+	data?: {
+		__typename?: string;
+		name?: string;
 		uri?: string;
-		href?: string;
-		profile?: { name?: string };
+		username?: string;
 	};
 }
 
@@ -212,7 +218,7 @@ export interface PartnerPlaylistResponse extends PartnerErrors {
 			name?: string;
 			description?: string;
 			images?: PartnerImage[];
-			owner?: { uri?: string; href?: string; profile?: { name?: string } };
+			ownerV2?: PartnerUser;
 			followers?: { total?: number };
 			public?: boolean;
 			snapshotId?: string;
