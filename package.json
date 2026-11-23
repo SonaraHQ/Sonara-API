@@ -5,7 +5,7 @@
     "license": "MIT",
     "repository": "github:SonaraHQ/Sonara-API",
     "type": "module",
-    "packageManager": "pnpm@11.21.0",
+    "packageManager": "pnpm@12.23.0",
     "engines": {
         "node": ">=24"
     },
@@ -28,7 +28,7 @@
     },
     "devDependencies": {
         "@biomejs/biome": "^2.6.8",
-        "@types/node": "^24.19.2",
+        "@types/node": "^26.6.6",
         "tsc-alias": "^1.9.10",
         "tsx": "^4.23.15",
         "typescript": "^7.0.2",
