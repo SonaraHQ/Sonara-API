@@ -16,14 +16,30 @@ Requires Node.js 24 or later. [nvm](https://github.com/nvm-sh/nvm) ([nvm-windows
 installs and switches Node.js versions: `nvm install 24`.
 
 ```bash
-corepack enable   # provides the pnpm version of package.json
+corepack enable        # installs the pnpm version set in package.json
 pnpm install
-pnpm install:browser
+pnpm install:browser   # Chromium headless shell, fetches the tokens
 cp .env.example .env
 pnpm build && pnpm start:prod
 ```
 
 The API listens on `http://localhost:1500`. With PM2: `pm2 start ecosystem.config.cjs`.
+
+On Linux, Chromium needs system libraries. If the token fetch fails on a fresh server, install them with
+`npx playwright install-deps chromium` (as root).
+
+### Updating
+
+```bash
+git pull
+pnpm install --frozen-lockfile
+pnpm install:browser
+pnpm build
+pm2 restart Sonara-API
+```
+
+Run `pnpm install:browser` after each update: a new Playwright version needs its own Chromium build,
+and without it the server can't fetch tokens, so playlists and recommendations fail.
 
 ### Docker
 
@@ -32,6 +48,9 @@ Images for `amd64` and `arm64` are published on GitHub Container Registry:
 ```bash
 docker run -d -p 1500:1500 --env-file .env -v sonara-cache:/app/cache ghcr.io/sonarahq/sonara-api:latest
 ```
+
+The image ships the matching Chromium. To update, pull the image and recreate the container:
+`docker pull ghcr.io/sonarahq/sonara-api:latest`.
 
 To build it yourself: `docker build -t sonara-api .`
 
@@ -51,7 +70,7 @@ Every setting is optional. See [`.env.example`](.env.example) for details.
 | `CACHE_MEMORY_MAX_MB` | `200` | Memory cache size |
 | `CACHE_MEMORY_TTL_HOURS` | `12` | Memory cache lifetime |
 | `CACHE_DISK_TTL_HOURS` | `24` | Disk cache lifetime, `0` = never expires |
-| `BROWSER_PATH` | bundled | Custom Chromium executable |
+| `BROWSER_PATH` | — | Chromium executable to use instead of the one from `pnpm install:browser` |
 
 ## API
 

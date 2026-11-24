@@ -18,7 +18,7 @@
         "lint": "biome check",
         "format": "biome check --write",
         "start:prod": "node dist/index.js",
-        "install:browser": "playwright install chromium"
+        "install:browser": "playwright install --only-shell chromium"
     },
     "dependencies": {
         "@hono/node-server": "^2.1.11",
